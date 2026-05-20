@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SQL Risk Analizi & Doğrulama</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #4f46e5;
+      --primary-glow: rgba(79,70,229,.25);
+      --danger:  #dc2626;
+      --warn:    #d97706;
+      --success: #059669;
+      --bg:      #f1f5f9;
+      --surface: #ffffff;
+      --border:  #e2e8f0;
+      --muted:   #64748b;
+      --text:    #0f172a;
+      --code-bg: #0d1117;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      margin: 0;
+    }
+
+    /* ───── Üst Başlık ───── */
+    .site-header {
+      background: linear-gradient(135deg, #0a0a1a 0%, #1a1040 45%, #2d1b69 100%);
+      padding: 18px 0 14px;
+      border-bottom: 1px solid rgba(255,255,255,.06);
+    }
+    .site-header .logo {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: -.02em;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .site-header .logo .shield {
+      width: 34px; height: 34px;
+      background: linear-gradient(135deg, #4f46e5, #7c3aed);
+      border-radius: 9px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1rem;
+      box-shadow: 0 0 14px rgba(124,58,237,.5);
+    }
+    .site-header .tagline {
+      font-size: .73rem;
+      color: #a5b4fc;
+      margin-top: 4px;
+      letter-spacing: .01em;
+    }
+    .pill-oracle {
+      background: rgba(255,255,255,.08);
+      border: 1px solid rgba(255,255,255,.18);
+      color: #c7d2fe;
+      font-size: .7rem;
+      font-weight: 600;
+      padding: 4px 12px;
+      border-radius: 20px;
+      letter-spacing: .04em;
+    }
+
+    /* ───── Kart / Panel ───── */
+    .panel {
+      background: var(--surface);
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      box-shadow: 0 1px 4px rgba(0,0,0,.05);
+      overflow: hidden;
+    }
+    .panel-hdr {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 13px 18px;
+      border-bottom: 1px solid var(--border);
+      font-weight: 600;
+      font-size: .88rem;
+    }
+    .panel-hdr.dark {
+      background: #0d1117;
+      border-color: #21262d;
+      color: #e6edf3;
+      border-radius: 0;
+    }
+
+    /* ───── Tab Bar ───── */
+    .tab-bar {
+      display: flex;
+      border-bottom: 2px solid var(--border);
+      padding: 0 18px;
+    }
+    .tab-btn {
+      background: none; border: none;
+      padding: 11px 16px 9px;
+      font-size: .83rem; font-weight: 500;
+      color: var(--muted); cursor: pointer;
+      position: relative; transition: color .18s;
+    }
+    .tab-btn.active { color: var(--primary); font-weight: 600; }
+    .tab-btn.active::after {
+      content: ''; position: absolute;
+      bottom: -2px; left: 0; right: 0;
+      height: 2px; background: var(--primary); border-radius: 2px 2px 0 0;
+    }
+
+    /* ───── SQL Textarea ───── */
+    .sql-ta {
+      width: 100%;
+      font-family: 'Menlo','Courier New',monospace;
+      font-size: 12.5px; line-height: 1.65;
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      padding: 13px 14px;
+      resize: vertical; min-height: 280px;
+      outline: none; color: var(--text);
+      background: #f8fafc;
+      transition: border-color .18s, background .18s;
+    }
+    .sql-ta:focus { border-color: var(--primary); background: #fff; }
+
+    /* ───── Drop Zone ───── */
+    .drop-zone {
+      border: 2px dashed #cbd5e1;
+      border-radius: 12px; padding: 52px 20px;
+      text-align: center; cursor: pointer;
+      background: #f8fafc; transition: all .2s;
+    }
+    .drop-zone:hover, .drop-zone.drag-over {
+      border-color: var(--primary); background: #eef2ff;
+    }
+    .dz-icon { font-size: 2.8rem; color: #a5b4fc; }
+
+    /* ───── Dönüştür Butonu ───── */
+    .btn-convert {
+      width: 100%; padding: 13px;
+      background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+      color: #fff; border: none; border-radius: 10px;
+      font-size: .95rem; font-weight: 600; cursor: pointer;
+      box-shadow: 0 4px 14px var(--primary-glow);
+      transition: transform .15s, box-shadow .15s;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
+    .btn-convert:hover { transform: translateY(-1px); box-shadow: 0 6px 20px var(--primary-glow); }
+    .btn-convert:active { transform: translateY(0); }
+    .btn-convert:disabled { opacity: .6; cursor: not-allowed; transform: none; }
+
+    /* ───── Stats ───── */
+    .stat-row { display: grid; grid-template-columns: repeat(4,1fr); gap: 10px; }
+    .stat-box {
+      border-radius: 12px; padding: 14px 10px; text-align: center;
+      border: 1.5px solid transparent;
+    }
+    .stat-box .num { font-size: 1.9rem; font-weight: 700; line-height: 1; }
+    .stat-box .lbl { font-size: .67rem; font-weight: 600; text-transform: uppercase; letter-spacing: .07em; margin-top: 5px; }
+    .sb-insert { background:#ecfdf5; border-color:#a7f3d0; color:#059669; }
+    .sb-update { background:#fffbeb; border-color:#fde68a; color:#b45309; }
+    .sb-delete { background:#fef2f2; border-color:#fecaca; color:#dc2626; }
+    .sb-ddl    { background:#f5f3ff; border-color:#c4b5fd; color:#6d28d9; }
+    .sb-other  { background:#f8fafc; border-color:#e2e8f0; color:#64748b; }
+
+    /* ───── Kritik Banner ───── */
+    .critical-banner {
+      background: linear-gradient(135deg, #7f1d1d 0%, #991b1b 100%);
+      border: 1px solid #fca5a5;
+      border-radius: 12px; padding: 14px 18px;
+      display: flex; align-items: flex-start; gap: 12px;
+      animation: slideDown .3s ease;
+    }
+    .critical-banner .cb-icon { font-size: 1.6rem; line-height: 1; flex-shrink: 0; }
+    .critical-banner .cb-title { color: #fff; font-weight: 700; font-size: .9rem; }
+    .critical-banner .cb-sub   { color: #fecaca; font-size: .78rem; margin-top: 3px; }
+
+    @keyframes slideDown {
+      from { opacity:0; transform:translateY(-8px); }
+      to   { opacity:1; transform:translateY(0); }
+    }
+
+    /* ───── Risk Tablosu ───── */
+    .tbl-scroll-wrap {
+      max-height: 360px;
+      overflow-y: auto;
+      overflow-x: auto;
+    }
+    .tbl-scroll-wrap::-webkit-scrollbar { width: 6px; height: 6px; }
+    .tbl-scroll-wrap::-webkit-scrollbar-track { background: #f1f5f9; }
+    .tbl-scroll-wrap::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+    .tbl-scroll-wrap::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+    .risk-tbl { width: 100%; border-collapse: collapse; font-size: .82rem; }
+    .risk-tbl thead th {
+      /* Yapışkan başlık */
+      position: sticky; top: 0; z-index: 2;
+      background: #f1f5f9; font-size: .7rem; font-weight: 600;
+      text-transform: uppercase; letter-spacing: .07em; color: var(--muted);
+      padding: 9px 14px; border-bottom: 2px solid var(--border); white-space: nowrap;
+      box-shadow: 0 1px 0 var(--border);
+    }
+    .risk-tbl td {
+      padding: 9px 14px; border-bottom: 1px solid var(--border); vertical-align: middle;
+    }
+    .risk-tbl tr:last-child td { border-bottom: none; }
+    .risk-tbl tr:hover td { background: #f8fafc; }
+    .risk-tbl tr.row-kritik td { background: #fff5f5; }
+    .risk-tbl tr.row-kritik:hover td { background: #fee2e2; }
+
+    /* Tip badge */
+    .tp {
+      display: inline-block; padding: 2px 8px; border-radius: 6px;
+      font-size: .7rem; font-weight: 700; font-family: 'Menlo', monospace;
+      letter-spacing: .02em;
+    }
+    .tp-insert   { background:#d1fae5; color:#065f46; }
+    .tp-update   { background:#fef3c7; color:#78350f; }
+    .tp-delete   { background:#fee2e2; color:#7f1d1d; }
+    .tp-create   { background:#ede9fe; color:#5b21b6; }
+    .tp-alter    { background:#fff7ed; color:#9a3412; }
+    .tp-drop     { background:#fce7f3; color:#9d174d; }
+    .tp-truncate { background:#fef2f2; color:#7f1d1d; }
+
+    /* Risk badge */
+    .rb {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 4px 10px; border-radius: 20px;
+      font-size: .73rem; font-weight: 600; white-space: nowrap;
+      border: 1px solid transparent;
+    }
+    .rb-dogru  { background:#eff6ff; color:#1d4ed8; border-color:#bfdbfe; }
+    .rb-where  { background:#fffbeb; color:#92400e; border-color:#fde68a; }
+    .rb-ddl    { background:#f5f3ff; color:#5b21b6; border-color:#c4b5fd; }
+    .rb-kritik {
+      background:#fef2f2; color:#991b1b; border-color:#fca5a5;
+      animation: pulseRed 1.8s ease-in-out infinite;
+    }
+    @keyframes pulseRed {
+      0%,100% { box-shadow: 0 0 0 0 rgba(220,38,38,0); }
+      50%      { box-shadow: 0 0 0 5px rgba(220,38,38,.18); }
+    }
+
+    .tbl-name { font-family:'Menlo','Courier New',monospace; font-size:.8rem; font-weight:600; }
+    .orig-preview {
+      font-family: 'Menlo','Courier New',monospace; font-size:.71rem;
+      color: var(--muted); max-width: 220px;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .note-text { font-size: .74rem; color: var(--muted); }
+    .note-warn { font-size: .74rem; color: #dc2626; font-weight: 600; }
+
+    /* ───── SQL Çıktı ───── */
+    .sql-out {
+      background: var(--code-bg);
+      color: #c9d1d9;
+      font-family: 'Menlo','Courier New',monospace;
+      font-size: 11.5px; line-height: 1.7;
+      padding: 18px 20px; margin: 0;
+      max-height: 420px; overflow-y: auto;
+      white-space: pre-wrap; word-break: break-word;
+      border-radius: 0 0 16px 16px;
+    }
+    .sql-out::-webkit-scrollbar { width: 6px; }
+    .sql-out::-webkit-scrollbar-track { background: #161b22; }
+    .sql-out::-webkit-scrollbar-thumb { background: #30363d; border-radius: 3px; }
+
+    /* Buton — header içi */
+    .btn-hdr {
+      background: none; border: 1px solid #30363d;
+      color: #8b949e; border-radius: 7px; padding: 5px 12px;
+      font-size: .78rem; font-weight: 500; cursor: pointer;
+      display: inline-flex; align-items: center; gap: 5px;
+      transition: all .15s;
+    }
+    .btn-hdr:hover { border-color: #4f46e5; color: #a5b4fc; }
+    .btn-hdr.green { background: #059669; border-color: #059669; color: #fff; }
+    .btn-hdr.green:hover { background: #047857; border-color: #047857; }
+
+    /* ───── Kılavuz Kartı ───── */
+    .legend-row { display: flex; align-items: center; gap: 10px; padding: 6px 0; font-size: .8rem; }
+    .legend-row:not(:last-child) { border-bottom: 1px solid #f1f5f9; }
+    .legend-desc { color: var(--muted); }
+
+    /* ───── Spinner ───── */
+    .spin {
+      width: 16px; height: 16px;
+      border: 2px solid rgba(255,255,255,.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: rotSpin .65s linear infinite;
+      flex-shrink: 0;
+    }
+    @keyframes rotSpin { to { transform: rotate(360deg); } }
+
+    /* ───── Empty State ───── */
+    .empty-state { text-align: center; padding: 64px 20px; }
+    .empty-state .es-icon {
+      font-size: 4.5rem;
+      background: linear-gradient(135deg, #4f46e5, #7c3aed);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      opacity: .2;
+    }
+
+    /* ───── Tablo Özeti ───── */
+    .tbl-summary { width:100%; border-collapse:collapse; font-size:.82rem; }
+    .tbl-summary thead th {
+      position: sticky; top: 0; z-index: 2;
+      background:#f1f5f9; font-size:.7rem; font-weight:600;
+      text-transform:uppercase; letter-spacing:.07em; color:var(--muted);
+      padding:8px 14px; border-bottom:2px solid var(--border); white-space:nowrap;
+      box-shadow: 0 1px 0 var(--border);
+    }
+    .tbl-summary td { padding:8px 14px; border-bottom:1px solid var(--border); vertical-align:middle; }
+    .tbl-summary tr:last-child td { border-bottom:none; }
+    .tbl-summary tr:hover td { background:#f8fafc; }
+    .op-count {
+      display:inline-flex; align-items:center; gap:4px;
+      padding:2px 8px; border-radius:12px; font-size:.72rem; font-weight:600;
+    }
+    .op-i { background:#d1fae5; color:#065f46; }
+    .op-u { background:#fef3c7; color:#78350f; }
+    .op-d { background:#fee2e2; color:#7f1d1d; }
+
+    @media(max-width:991px) {
+      .stat-box .num { font-size: 1.5rem; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════ HEADER ═══════════ -->
+<header class="site-header">
+  <div class="container d-flex align-items-center justify-content-between">
+    <div>
+      <div class="logo">
+        <div class="shield">🛡️</div>
+        SQL Risk Analizi &amp; Doğrulama
+      </div>
+      <div class="tagline">
+        INSERT doğrulama &nbsp;·&nbsp; UPDATE / DELETE risk analizi &nbsp;·&nbsp; Oracle SQL uyumlu çıktı
+      </div>
+    </div>
+    <span class="pill-oracle">ORACLE SQL</span>
+  </div>
+</header>
+
+<!-- ═══════════ ANA ALAN ═══════════ -->
+<main class="container py-4">
+  <div class="row g-4">
+
+    <!-- ─────────── SOL: INPUT ─────────── -->
+    <div class="col-lg-5 d-flex flex-column gap-3">
+
+      <!-- Giriş Paneli -->
+      <div class="panel">
+        <div class="tab-bar">
+          <button class="tab-btn active" onclick="switchTab('text',this)">
+            <i class="bi bi-textarea-t me-1"></i>SQL Yapıştır
+          </button>
+          <button class="tab-btn" onclick="switchTab('file',this)">
+            <i class="bi bi-file-earmark-text me-1"></i>Dosya Yükle
+          </button>
+        </div>
+
+        <div class="p-3 d-flex flex-column gap-3">
+          <!-- Metin -->
+          <div id="panel-text">
+            <textarea id="sqlText" class="sql-ta" rows="17"
+              placeholder="-- INSERT, UPDATE, DELETE ifadelerini buraya yapıştırın.
+-- Birden fazla ifadeyi noktalı virgülle ( ; ) ayırın.
+
+Insert into SCHEMA.TABLE (COL1, COL2, COL3)
+Values ('deger', 42, SYSDATE);
+
+Update SCHEMA.TABLE
+  Set COL1 = 'yeni' Where ID = 100;
+
+Delete from SCHEMA.TABLE;   -- WHERE yok → KRİTİK!"></textarea>
+          </div>
+
+          <!-- Dosya -->
+          <div id="panel-file" style="display:none">
+            <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+              <div class="dz-icon"><i class="bi bi-cloud-arrow-up"></i></div>
+              <p class="fw-semibold mt-3 mb-1" style="color:#1e293b">Dosyayı buraya sürükleyin</p>
+              <p class="text-muted small mb-0">veya tıklayarak seçin &nbsp;·&nbsp; .txt &nbsp;·&nbsp; .sql</p>
+            </div>
+            <input type="file" id="fileInput" accept=".txt,.sql" style="display:none" onchange="handleFile(this)">
+            <div id="fileBadge" class="mt-2 py-2 px-3 rounded-3 d-flex align-items-center gap-2"
+                 style="display:none!important;background:#f0fdf4;border:1px solid #bbf7d0">
+              <i class="bi bi-file-check-fill text-success"></i>
+              <span id="fileInfo" class="small fw-semibold text-success"></span>
+            </div>
+          </div>
+
+          <!-- Parse hataları -->
+          <div id="parseErrors" class="alert alert-warning py-2 px-3 small mb-0" style="display:none">
+            <i class="bi bi-exclamation-triangle-fill me-1"></i>
+            <strong>Parse Uyarıları:</strong>
+            <ul id="errList" class="mb-0 mt-1 ps-3"></ul>
+          </div>
+
+          <!-- Buton -->
+          <button class="btn-convert" id="btnConvert" onclick="doConvert()">
+            <span id="btnTxt"><i class="bi bi-lightning-charge-fill"></i> Analiz Et &amp; Dönüştür</span>
+            <span id="btnLoading" style="display:none">
+              <span class="spin"></span> İşleniyor...
+            </span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Risk Seviyesi Kılavuzu -->
+      <div class="panel">
+        <div class="panel-hdr" style="color:var(--muted);font-size:.82rem">
+          <i class="bi bi-info-circle"></i> Risk Seviyesi Kılavuzu
+        </div>
+        <div class="px-4 py-3">
+          <div class="legend-row">
+            <span class="rb rb-dogru">✓ Doğrulama</span>
+            <span class="legend-desc">INSERT → kayıt veritabanında var mı?</span>
+          </div>
+          <div class="legend-row">
+            <span class="rb rb-where">⏳ Çalıştır &amp; Gör</span>
+            <span class="legend-desc">WHERE var; asıl risk COUNT(*)'a göre belirlenir</span>
+          </div>
+          <div class="legend-row" style="border:none">
+            <span class="rb rb-kritik">⛔ KRİTİK</span>
+            <span class="legend-desc">WHERE yok → tüm tablo etkilenecek!</span>
+          </div>
+          <hr class="my-2">
+          <div class="text-muted small lh-sm">
+            <strong>COUNT(*) sonuçlarına göre:</strong><br>
+            0 satır → Uyarı &nbsp;|&nbsp; 1–10 → Düşük &nbsp;|&nbsp; 11–100 → Orta &nbsp;|&nbsp; &gt;100 → Yüksek
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─────────── SAĞ: OUTPUT ─────────── -->
+    <div class="col-lg-7 d-flex flex-column gap-3">
+
+      <!-- Empty State (başlangıçta göster) -->
+      <div id="emptyState" class="empty-state">
+        <div class="es-icon"><i class="bi bi-shield-check"></i></div>
+        <p class="text-muted mt-4 mb-1 fw-semibold">Henüz analiz yapılmadı</p>
+        <p class="text-muted small">SQL ifadelerinizi girin ve <em>Analiz Et</em> butonuna tıklayın.</p>
+      </div>
+
+      <!-- Sonuç Bloğu (gizli) -->
+      <div id="resultBlock" style="display:none" class="d-flex flex-column gap-3">
+
+        <!-- İstatistik Kartları -->
+        <div class="stat-row" style="grid-template-columns:repeat(5,1fr)">
+          <div class="stat-box sb-insert">
+            <div class="num" id="sInsert">0</div>
+            <div class="lbl">INSERT</div>
+          </div>
+          <div class="stat-box sb-update">
+            <div class="num" id="sUpdate">0</div>
+            <div class="lbl">UPDATE</div>
+          </div>
+          <div class="stat-box sb-delete">
+            <div class="num" id="sDelete">0</div>
+            <div class="lbl">DELETE</div>
+          </div>
+          <div class="stat-box sb-ddl" title="CREATE / ALTER / DROP / TRUNCATE ifadeleri">
+            <div class="num" id="sDdl">0</div>
+            <div class="lbl">DDL</div>
+          </div>
+          <div class="stat-box sb-other" title="SELECT, COMMIT, ROLLBACK ve tanınamayan ifadeler">
+            <div class="num" id="sOther">0</div>
+            <div class="lbl">Diğer</div>
+          </div>
+        </div>
+
+        <!-- KRİTİK Banner -->
+        <div id="criticalBanner" style="display:none" class="critical-banner">
+          <span class="cb-icon">⛔</span>
+          <div>
+            <div class="cb-title">KRİTİK RİSK TESPİT EDİLDİ</div>
+            <div class="cb-sub" id="criticalSub">
+              WHERE koşulu olmayan ifade(ler) bulundu — tüm tablo etkilenecek!
+            </div>
+          </div>
+        </div>
+
+        <!-- Risk Tablosu -->
+        <div class="panel" id="riskPanel2">
+          <div class="panel-hdr">
+            <i class="bi bi-table" style="color:var(--primary)"></i>
+            İfade Bazında Risk Analizi
+            <span id="riskRowCount" class="ms-1" style="font-weight:400;font-size:.78rem;color:var(--muted)"></span>
+            <div class="ms-auto d-flex gap-1">
+              <button class="btn-hdr" style="font-size:.72rem;padding:3px 10px" onclick="filterRisk('ALL')" id="fAll">Tümü</button>
+              <button class="btn-hdr" style="font-size:.72rem;padding:3px 10px;color:#dc2626;border-color:#fca5a5" onclick="filterRisk('KRITIK')" id="fKritik">⛔ Kritik</button>
+              <button class="btn-hdr" style="font-size:.72rem;padding:3px 10px;color:#5b21b6;border-color:#c4b5fd" onclick="filterRisk('DDL')" id="fDdl">DDL</button>
+            </div>
+          </div>
+          <div class="tbl-scroll-wrap">
+            <table class="risk-tbl">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>TİP</th>
+                  <th>TABLO</th>
+                  <th>RİSK SEVİYESİ</th>
+                  <th>NOT</th>
+                </tr>
+              </thead>
+              <tbody id="riskBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Tablo Özeti -->
+        <div id="tableSummaryPanel" style="display:none" class="panel">
+          <div class="panel-hdr">
+            <i class="bi bi-database" style="color:var(--primary)"></i>
+            Etkilenen Tablolar
+            <span id="tableCount" class="ms-1 text-muted" style="font-weight:400;font-size:.8rem"></span>
+          </div>
+          <div class="tbl-scroll-wrap" style="max-height:240px">
+            <table class="tbl-summary">
+              <thead>
+                <tr>
+                  <th>TABLO ADI</th>
+                  <th style="text-align:center">INSERT</th>
+                  <th style="text-align:center">UPDATE</th>
+                  <th style="text-align:center">DELETE</th>
+                  <th style="text-align:center">TOPLAM</th>
+                </tr>
+              </thead>
+              <tbody id="tableSummaryBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Üretilen SQL -->
+        <div class="panel">
+          <div class="panel-hdr dark">
+            <i class="bi bi-terminal" style="color:#a5b4fc"></i>
+            <span>Üretilen SQL</span>
+            <div class="ms-auto d-flex gap-2">
+              <button class="btn-hdr" id="btnCopy" onclick="copyOut()">
+                <i class="bi bi-clipboard"></i> Kopyala
+              </button>
+              <button class="btn-hdr green" onclick="downloadOut()">
+                <i class="bi bi-download"></i> İndir .sql
+              </button>
+            </div>
+          </div>
+          <pre class="sql-out" id="sqlOut"></pre>
+        </div>
+
+      </div><!-- /resultBlock -->
+    </div><!-- /col -->
+
+  </div><!-- /row -->
+</main>
+
+<!-- Gizli download form -->
+<form id="dlForm" method="POST" action="/download" style="display:none">
+  <input type="hidden" name="output" id="dlOutput">
+</form>
+
+<script>
+let currentTab  = 'text';
+let fileContent = null;
+let outputText  = '';
+
+/* ── Tab geçişi ── */
+function switchTab(tab, btn) {
+  currentTab = tab;
+  document.getElementById('panel-text').style.display = tab === 'text' ? '' : 'none';
+  document.getElementById('panel-file').style.display = tab === 'file' ? '' : 'none';
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+/* ── Dosya seçimi ── */
+function handleFile(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    fileContent = e.target.result;
+    const badge = document.getElementById('fileBadge');
+    badge.style.display = '';
+    document.getElementById('fileInfo').textContent =
+      `✓  ${file.name}  (${(file.size / 1024).toFixed(1)} KB)`;
+  };
+  reader.readAsText(file, 'UTF-8');
+}
+
+/* ── Drag & Drop ── */
+const dz = document.getElementById('dropZone');
+['dragover','dragenter'].forEach(e => dz.addEventListener(e, ev => { ev.preventDefault(); dz.classList.add('drag-over'); }));
+['dragleave','dragend'].forEach(e => dz.addEventListener(e, () => dz.classList.remove('drag-over')));
+dz.addEventListener('drop', e => {
+  e.preventDefault(); dz.classList.remove('drag-over');
+  const file = e.dataTransfer.files[0]; if (!file) return;
+  const fi = document.getElementById('fileInput');
+  const dt = new DataTransfer(); dt.items.add(file); fi.files = dt.files;
+  handleFile(fi);
+});
+
+/* ── Risk & Tip badge HTML'leri ── */
+const RISK_HTML = {
+  DOGRULAMA: '<span class="rb rb-dogru"><i class="bi bi-check-circle-fill"></i> Doğrulama</span>',
+  WHERE_VAR:  '<span class="rb rb-where"><i class="bi bi-clock"></i> Çalıştır &amp; Gör</span>',
+  DDL:        '<span class="rb rb-ddl"><i class="bi bi-tools"></i> DDL İşlemi</span>',
+  KRITIK:     '<span class="rb rb-kritik"><i class="bi bi-exclamation-octagon-fill"></i> KRİTİK – WHERE YOK</span>',
+};
+const TYPE_HTML = {
+  INSERT:   '<span class="tp tp-insert">INSERT</span>',
+  UPDATE:   '<span class="tp tp-update">UPDATE</span>',
+  DELETE:   '<span class="tp tp-delete">DELETE</span>',
+  CREATE:   '<span class="tp tp-create">CREATE</span>',
+  ALTER:    '<span class="tp tp-alter">ALTER</span>',
+  DROP:     '<span class="tp tp-drop">DROP</span>',
+  TRUNCATE: '<span class="tp tp-truncate">TRUNCATE</span>',
+};
+
+/* ── Ana dönüşüm ── */
+async function doConvert() {
+  let sqlText = '';
+  if (currentTab === 'text') {
+    sqlText = document.getElementById('sqlText').value.trim();
+    if (!sqlText) { alert('Lütfen SQL metni girin.'); return; }
+  } else {
+    if (!fileContent) { alert('Lütfen bir dosya seçin.'); return; }
+    sqlText = fileContent;
+  }
+
+  setLoading(true);
+  const fd = new FormData();
+  fd.append('sql_text', sqlText);
+
+  try {
+    const res  = await fetch('/convert', { method: 'POST', body: fd });
+    const data = await res.json();
+    if (data.error) { alert('Hata: ' + data.error); return; }
+    renderResult(data);
+  } catch (err) {
+    alert('Bağlantı hatası: ' + err.message);
+  } finally {
+    setLoading(false);
+  }
+}
+
+function renderResult(data) {
+  outputText = data.output;
+
+  /* İstatistikler */
+  document.getElementById('sInsert').textContent = data.stats.insert;
+  document.getElementById('sUpdate').textContent = data.stats.update;
+  document.getElementById('sDelete').textContent = data.stats.delete;
+  document.getElementById('sDdl').textContent    = data.stats.ddl;
+  document.getElementById('sOther').textContent  = data.stats.other;
+
+  /* Kritik banner */
+  const kritiks = (data.statements || []).filter(s => s.risk === 'KRITIK');
+  if (kritiks.length) {
+    document.getElementById('criticalBanner').style.display = '';
+    const tables = kritiks.map(s => s.table).join(', ');
+    document.getElementById('criticalSub').textContent =
+      `${kritiks.length} adet WHERE koşulsuz ifade: ${tables} — tüm tablo etkilenecek!`;
+  } else {
+    document.getElementById('criticalBanner').style.display = 'none';
+  }
+
+  /* Risk tablosu */
+  const tbody = document.getElementById('riskBody');
+  const stmts = data.statements || [];
+  tbody.innerHTML = stmts.map((s, i) => {
+    const isKritik = s.risk === 'KRITIK';
+    const noteHtml = isKritik
+      ? `<span class="note-warn"><i class="bi bi-exclamation-triangle-fill me-1"></i>${escHtml(s.note)}</span>`
+      : `<span class="note-text">${escHtml(s.note || '')}</span>`;
+    return `
+      <tr class="${isKritik ? 'row-kritik' : ''}" data-risk="${s.risk}" data-type="${s.type}">
+        <td style="color:var(--muted);font-size:.75rem;width:32px">${i + 1}</td>
+        <td>${TYPE_HTML[s.type] || s.type}</td>
+        <td>
+          <div class="tbl-name">${escHtml(s.table)}</div>
+          <div class="orig-preview" title="${escHtml(s.original_short)}">${escHtml(s.original_short)}</div>
+        </td>
+        <td>${RISK_HTML[s.risk] || s.risk}</td>
+        <td>${noteHtml}</td>
+      </tr>`;
+  }).join('');
+  document.getElementById('riskRowCount').textContent = `(${stmts.length} ifade)`;
+
+  /* Parse hataları */
+  if (data.errors && data.errors.length) {
+    document.getElementById('parseErrors').style.display = '';
+    document.getElementById('errList').innerHTML = data.errors.map(e => `<li>${escHtml(e)}</li>`).join('');
+  } else {
+    document.getElementById('parseErrors').style.display = 'none';
+  }
+
+  /* Tablo özeti */
+  const ts = data.table_summary || {};
+  const tsKeys = Object.keys(ts);
+  if (tsKeys.length) {
+    document.getElementById('tableSummaryPanel').style.display = '';
+    document.getElementById('tableCount').textContent = `(${tsKeys.length} tablo)`;
+    document.getElementById('tableSummaryBody').innerHTML = tsKeys
+      .sort((a, b) => {
+        const totalA = ts[a].INSERT + ts[a].UPDATE + ts[a].DELETE;
+        const totalB = ts[b].INSERT + ts[b].UPDATE + ts[b].DELETE;
+        return totalB - totalA;
+      })
+      .map(tbl => {
+        const r = ts[tbl];
+        const total = r.INSERT + r.UPDATE + r.DELETE;
+        const iHtml = r.INSERT ? `<span class="op-count op-i"><i class="bi bi-plus"></i>${r.INSERT}</span>` : '<span class="text-muted">—</span>';
+        const uHtml = r.UPDATE ? `<span class="op-count op-u"><i class="bi bi-pencil"></i>${r.UPDATE}</span>` : '<span class="text-muted">—</span>';
+        const dHtml = r.DELETE ? `<span class="op-count op-d"><i class="bi bi-trash"></i>${r.DELETE}</span>` : '<span class="text-muted">—</span>';
+        return `<tr>
+          <td class="tbl-name">${escHtml(tbl)}</td>
+          <td style="text-align:center">${iHtml}</td>
+          <td style="text-align:center">${uHtml}</td>
+          <td style="text-align:center">${dHtml}</td>
+          <td style="text-align:center;font-weight:700;color:var(--text)">${total}</td>
+        </tr>`;
+      }).join('');
+  } else {
+    document.getElementById('tableSummaryPanel').style.display = 'none';
+  }
+
+  /* SQL çıktı */
+  document.getElementById('sqlOut').textContent = data.output;
+
+  /* Panelleri göster */
+  document.getElementById('emptyState').style.display  = 'none';
+  document.getElementById('resultBlock').style.display = '';
+}
+
+/* ── Risk tablosu filtresi ── */
+let allStatements = [];
+
+function filterRisk(type) {
+  ['fAll','fKritik','fDdl'].forEach(id => {
+    const el = document.getElementById(id);
+    el.style.background = '';
+    el.style.color = el.dataset.origColor || '';
+  });
+
+  const rows = document.querySelectorAll('#riskBody tr');
+  let visible = 0;
+  rows.forEach(row => {
+    const show = type === 'ALL' || row.dataset.risk === type || row.dataset.type === type;
+    row.style.display = show ? '' : 'none';
+    if (show) visible++;
+  });
+  document.getElementById('riskRowCount').textContent = `(${visible} / ${rows.length} ifade)`;
+
+  const activeBtn = { ALL:'fAll', KRITIK:'fKritik', DDL:'fDdl' }[type];
+  if (activeBtn) {
+    const btn = document.getElementById(activeBtn);
+    btn.style.background = '#4f46e5';
+    btn.style.color = '#fff';
+    btn.style.borderColor = '#4f46e5';
+  }
+}
+
+/* ── Yardımcılar ── */
+function escHtml(str) {
+  return (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function setLoading(on) {
+  document.getElementById('btnTxt').style.display     = on ? 'none' : '';
+  document.getElementById('btnLoading').style.display = on ? '' : 'none';
+  document.getElementById('btnConvert').disabled = on;
+}
+function copyOut() {
+  navigator.clipboard.writeText(outputText).then(() => {
+    const b = document.getElementById('btnCopy');
+    b.innerHTML = '<i class="bi bi-check-lg"></i> Kopyalandı!';
+    b.style.color = '#a7f3d0'; b.style.borderColor = '#059669';
+    setTimeout(() => {
+      b.innerHTML = '<i class="bi bi-clipboard"></i> Kopyala';
+      b.style.color = ''; b.style.borderColor = '';
+    }, 2000);
+  });
+}
+function downloadOut() {
+  document.getElementById('dlOutput').value = outputText;
+  document.getElementById('dlForm').submit();
+}
+</script>
+</body>
+</html>

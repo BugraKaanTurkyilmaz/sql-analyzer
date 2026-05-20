@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+*.egg-info/
+
+# Ortam
+.env
+.env.*
+
+# IDE
+.vscode/
+.idea/
+*.DS_Store
+
+# Geçici dosyalar
+/tmp/
+*.log
