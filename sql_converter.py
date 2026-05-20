@@ -393,6 +393,7 @@ def generate_ddl_select(parsed: dict) -> Optional[str]:
     if action == 'CREATE' and obj_type == 'TABLE':
         return (
             f"SELECT\n    '{kaynak}' AS KAYNAK,\n"
+            f"    CASE WHEN COUNT(*) = 0 THEN 'OK' ELSE 'FAIL' END AS STATUS,\n"
             f"    CASE\n"
             f"        WHEN COUNT(*) > 0 THEN 'HATA: {obj} tablosu zaten mevcut — CREATE başarısız olacak (ORA-00955)'\n"
             f"        ELSE 'OK: {obj} tablosu yok, oluşturulabilir'\n"
@@ -407,6 +408,7 @@ def generate_ddl_select(parsed: dict) -> Optional[str]:
         ow2 = f" AND TABLE_OWNER = '{on_tbl_owner}'" if on_tbl_owner else ''
         return (
             f"SELECT\n    '{kaynak}' AS KAYNAK,\n"
+            f"    CASE WHEN COUNT(*) = 0 THEN 'OK' ELSE 'FAIL' END AS STATUS,\n"
             f"    CASE\n"
             f"        WHEN COUNT(*) > 0 THEN 'HATA: {obj} index zaten mevcut — CREATE başarısız olacak (ORA-00955)'\n"
             f"        ELSE 'OK: {obj} index yok, oluşturulabilir'\n"
@@ -419,6 +421,7 @@ def generate_ddl_select(parsed: dict) -> Optional[str]:
     if action == 'CREATE' and obj_type not in ('TABLE', 'INDEX'):
         return (
             f"SELECT\n    '{kaynak}' AS KAYNAK,\n"
+            f"    CASE WHEN COUNT(*) = 0 THEN 'OK' ELSE 'FAIL' END AS STATUS,\n"
             f"    CASE\n"
             f"        WHEN COUNT(*) > 0 THEN 'UYARI: {obj} nesnesi zaten mevcut — OR REPLACE yoksa hata alınabilir'\n"
             f"        ELSE 'OK: {obj} nesnesi yok, oluşturulabilir'\n"
@@ -431,6 +434,7 @@ def generate_ddl_select(parsed: dict) -> Optional[str]:
     if action == 'DROP' and obj_type == 'TABLE':
         return (
             f"SELECT\n    '{kaynak}' AS KAYNAK,\n"
+            f"    CASE WHEN COUNT(*) > 0 THEN 'OK' ELSE 'FAIL' END AS STATUS,\n"
             f"    CASE\n"
             f"        WHEN COUNT(*) > 0 THEN 'OK: {obj} tablosu mevcut, DROP çalışacak'\n"
             f"        ELSE 'HATA: {obj} tablosu bulunamadı — DROP başarısız olacak (ORA-00942)'\n"
@@ -443,6 +447,7 @@ def generate_ddl_select(parsed: dict) -> Optional[str]:
     if action == 'DROP' and obj_type == 'INDEX':
         return (
             f"SELECT\n    '{kaynak}' AS KAYNAK,\n"
+            f"    CASE WHEN COUNT(*) > 0 THEN 'OK' ELSE 'FAIL' END AS STATUS,\n"
             f"    CASE\n"
             f"        WHEN COUNT(*) > 0 THEN 'OK: {obj} index mevcut, DROP çalışacak'\n"
             f"        ELSE 'HATA: {obj} index bulunamadı — DROP başarısız olacak'\n"
@@ -455,6 +460,7 @@ def generate_ddl_select(parsed: dict) -> Optional[str]:
     if action == 'DROP' and obj_type not in ('TABLE', 'INDEX'):
         return (
             f"SELECT\n    '{kaynak}' AS KAYNAK,\n"
+            f"    CASE WHEN COUNT(*) > 0 THEN 'OK' ELSE 'FAIL' END AS STATUS,\n"
             f"    CASE\n"
             f"        WHEN COUNT(*) > 0 THEN 'OK: {obj} nesnesi mevcut, DROP çalışacak'\n"
             f"        ELSE 'HATA: {obj} nesnesi bulunamadı — DROP başarısız olacak'\n"
@@ -467,6 +473,7 @@ def generate_ddl_select(parsed: dict) -> Optional[str]:
     if action == 'TRUNCATE':
         return (
             f"SELECT\n    '{kaynak}' AS KAYNAK,\n"
+            f"    CASE WHEN COUNT(*) > 0 THEN 'OK' ELSE 'FAIL' END AS STATUS,\n"
             f"    CASE\n"
             f"        WHEN COUNT(*) = 0 THEN 'UYARI: {obj} tablosu bulunamadı — TRUNCATE başarısız olacak'\n"
             f"        ELSE 'KRİTİK: {obj} tablosundaki TÜM veriler silinecek!'\n"
@@ -485,6 +492,7 @@ def generate_ddl_select(parsed: dict) -> Optional[str]:
         if alter_op == 'ADD_COLUMN' and col:
             return (
                 f"SELECT\n    '{kaynak}' AS KAYNAK,\n"
+                f"    CASE WHEN COUNT(*) = 0 THEN 'OK' ELSE 'FAIL' END AS STATUS,\n"
                 f"    CASE\n"
                 f"        WHEN COUNT(*) > 0 THEN 'HATA: {col} sütunu zaten mevcut — ADD başarısız olacak (ORA-01430)'\n"
                 f"        ELSE 'OK: {col} sütunu yok, eklenebilir'\n"
@@ -496,6 +504,7 @@ def generate_ddl_select(parsed: dict) -> Optional[str]:
         if alter_op == 'DROP_COLUMN' and col:
             return (
                 f"SELECT\n    '{kaynak}' AS KAYNAK,\n"
+                f"    CASE WHEN COUNT(*) > 0 THEN 'OK' ELSE 'FAIL' END AS STATUS,\n"
                 f"    CASE\n"
                 f"        WHEN COUNT(*) > 0 THEN 'OK: {col} sütunu mevcut, DROP çalışacak'\n"
                 f"        ELSE 'HATA: {col} sütunu bulunamadı — DROP başarısız olacak (ORA-00904)'\n"
@@ -507,6 +516,7 @@ def generate_ddl_select(parsed: dict) -> Optional[str]:
         if alter_op == 'MODIFY_COLUMN' and col:
             return (
                 f"SELECT\n    '{kaynak}' AS KAYNAK,\n"
+                f"    CASE WHEN COUNT(*) > 0 THEN 'OK' ELSE 'FAIL' END AS STATUS,\n"
                 f"    CASE\n"
                 f"        WHEN COUNT(*) > 0 THEN 'OK: {col} sütunu mevcut, MODIFY çalışacak'\n"
                 f"        ELSE 'HATA: {col} sütunu bulunamadı — MODIFY başarısız olacak (ORA-00904)'\n"
@@ -519,6 +529,7 @@ def generate_ddl_select(parsed: dict) -> Optional[str]:
             new_col = (parsed.get('new_name') or '').strip('"').upper()
             return (
                 f"SELECT\n    '{kaynak}' AS KAYNAK,\n"
+                f"    CASE WHEN COUNT(*) > 0 THEN 'OK' ELSE 'FAIL' END AS STATUS,\n"
                 f"    CASE\n"
                 f"        WHEN COUNT(*) = 0 THEN 'HATA: {col} sütunu bulunamadı — RENAME başarısız olacak'\n"
                 f"        ELSE 'OK: {col} sütunu mevcut, {new_col} olarak yeniden adlandırılabilir'\n"
@@ -531,6 +542,7 @@ def generate_ddl_select(parsed: dict) -> Optional[str]:
             cname = (parsed.get('constraint') or '').strip('"').upper()
             return (
                 f"SELECT\n    '{kaynak}' AS KAYNAK,\n"
+                f"    CASE WHEN COUNT(*) = 0 THEN 'OK' ELSE 'FAIL' END AS STATUS,\n"
                 f"    CASE\n"
                 f"        WHEN COUNT(*) > 0 THEN 'HATA: {cname} constraint zaten mevcut'\n"
                 f"        ELSE 'OK: {cname} constraint yok, eklenebilir'\n"
@@ -542,6 +554,7 @@ def generate_ddl_select(parsed: dict) -> Optional[str]:
         # Generic ALTER — sadece tablonun varlığını kontrol et
         return (
             f"SELECT\n    '{kaynak}' AS KAYNAK,\n"
+            f"    CASE WHEN COUNT(*) > 0 THEN 'OK' ELSE 'FAIL' END AS STATUS,\n"
             f"    CASE\n"
             f"        WHEN COUNT(*) > 0 THEN 'OK: {t_name} tablosu mevcut, ALTER çalışabilir'\n"
             f"        ELSE 'HATA: {t_name} tablosu bulunamadı — ALTER başarısız olacak (ORA-00942)'\n"
@@ -561,10 +574,12 @@ def generate_insert_select(parsed: dict) -> str:
     kaynak = escape_sql(normalize_ws(parsed['original']))
     if parsed.get('error'):
         return (f"SELECT\n    '{kaynak}' AS KAYNAK,\n"
+                f"    'FAIL'                               AS STATUS,\n"
                 f"    'PARSE HATASI: {parsed['error']}' AS SONUC\nFROM DUAL")
     cols, vals, table = parsed['columns'], parsed['values'], parsed['table']
     where = '\n    AND '.join(value_to_where(c, v) for c, v in zip(cols, vals))
     return (f"SELECT\n    '{kaynak}' AS KAYNAK,\n"
+            f"    CASE WHEN COUNT(*) > 0 THEN 'OK' ELSE 'FAIL' END AS STATUS,\n"
             f"    CASE\n        WHEN COUNT(*) > 0 THEN 'OK'\n        ELSE 'FAIL'\n    END AS SONUC\n"
             f"FROM {table}\nWHERE {where}")
 
@@ -574,6 +589,7 @@ def generate_update_select(parsed: dict) -> str:
     kaynak = escape_sql(normalize_ws(parsed['original']))
     if where:
         where_part = f"WHERE {where}"
+        status_line = "    CASE WHEN COUNT(*) > 0 THEN 'OK' ELSE 'FAIL' END AS STATUS,\n"
         case_lines = (
             "        WHEN COUNT(*) = 0  THEN 'UYARI: Güncellenecek kayıt bulunamadı'\n"
             "        WHEN COUNT(*) <= 10  THEN 'DÜŞÜK RİSK: ' || TO_CHAR(COUNT(*)) || ' satır güncellenecek'\n"
@@ -582,11 +598,13 @@ def generate_update_select(parsed: dict) -> str:
         )
     else:
         where_part = "/* 1=1   <<< UYARI: WHERE KOŞULU YOK – TÜM TABLO ETKİLENECEK >>> */"
+        status_line = "    CASE WHEN COUNT(*) > 0 THEN 'OK' ELSE 'FAIL' END AS STATUS,\n"
         case_lines = (
             "        WHEN COUNT(*) = 0 THEN 'KRİTİK [WHERE YOK] → Tablo zaten boş'\n"
             "        ELSE 'KRİTİK [WHERE YOK] → Tablodaki TÜM ' || TO_CHAR(COUNT(*)) || ' SATIR GÜNCELLENECEKTİR!'"
         )
     return (f"SELECT\n    '{kaynak}' AS KAYNAK,\n"
+            f"{status_line}"
             f"    CASE\n{case_lines}\n    END AS SONUC\n"
             f"FROM {table}\n{where_part}")
 
@@ -596,6 +614,7 @@ def generate_delete_select(parsed: dict) -> str:
     kaynak = escape_sql(normalize_ws(parsed['original']))
     if where:
         where_part = f"WHERE {where}"
+        status_line = "    CASE WHEN COUNT(*) > 0 THEN 'OK' ELSE 'FAIL' END AS STATUS,\n"
         case_lines = (
             "        WHEN COUNT(*) = 0  THEN 'UYARI: Silinecek kayıt bulunamadı'\n"
             "        WHEN COUNT(*) <= 10  THEN 'DÜŞÜK RİSK: ' || TO_CHAR(COUNT(*)) || ' satır silinecek'\n"
@@ -604,11 +623,13 @@ def generate_delete_select(parsed: dict) -> str:
         )
     else:
         where_part = "/* 1=1   <<< UYARI: WHERE KOŞULU YOK – TÜM TABLO SİLİNECEK >>> */"
+        status_line = "    CASE WHEN COUNT(*) > 0 THEN 'OK' ELSE 'FAIL' END AS STATUS,\n"
         case_lines = (
             "        WHEN COUNT(*) = 0 THEN 'KRİTİK [WHERE YOK] → Tablo zaten boş'\n"
             "        ELSE 'KRİTİK [WHERE YOK] → Tablodaki TÜM ' || TO_CHAR(COUNT(*)) || ' SATIR SİLİNECEKTİR!'"
         )
     return (f"SELECT\n    '{kaynak}' AS KAYNAK,\n"
+            f"{status_line}"
             f"    CASE\n{case_lines}\n    END AS SONUC\n"
             f"FROM {table}\n{where_part}")
 

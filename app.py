@@ -39,6 +39,53 @@ def convert():
     })
 
 
+@app.route('/test_db', methods=['POST'])
+def test_db():
+    try:
+        import oracledb
+    except ImportError:
+        return jsonify({'error': 'oracledb kütüphanesi eksik. pip install oracledb çalıştırın.'}), 500
+
+    data     = request.get_json(force=True)
+    host     = (data.get('host') or '').strip()
+    port     = int(data.get('port') or 1521)
+    service  = (data.get('service') or '').strip()
+    user     = (data.get('user') or '').strip()
+    password = (data.get('password') or '').strip()
+    stmts    = data.get('statements', [])
+
+    if not (host and service and user):
+        return jsonify({'error': 'Host, servis adı ve kullanıcı adı zorunludur.'}), 400
+
+    try:
+        conn = oracledb.connect(user=user, password=password,
+                                dsn=f'{host}:{port}/{service}')
+    except Exception as e:
+        return jsonify({'error': f'Bağlantı hatası: {e}'}), 400
+
+    results = []
+    try:
+        cur = conn.cursor()
+        for stmt in stmts:
+            idx = stmt['index']
+            sql = (stmt.get('select') or '').strip()
+            if not sql:
+                results.append({'index': idx, 'status': 'SKIP', 'result': ''})
+                continue
+            try:
+                cur.execute(sql)
+                row = cur.fetchone()
+                sonuc = str(row[1]) if row and len(row) > 1 else (str(row[0]) if row else '')
+                results.append({'index': idx, 'status': 'OK', 'result': sonuc})
+            except Exception as e:
+                results.append({'index': idx, 'status': 'FAIL', 'result': str(e)})
+        cur.close()
+    finally:
+        conn.close()
+
+    return jsonify({'results': results})
+
+
 @app.route('/download', methods=['POST'])
 def download():
     output = request.form.get('output', '')
