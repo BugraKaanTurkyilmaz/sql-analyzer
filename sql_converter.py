@@ -187,6 +187,9 @@ _TYPE_MAP = {
     'COMMIT':   'TCL',
     'ROLLBACK': 'TCL',
     'SAVEPOINT':'TCL',
+    'EXEC':     'EXEC',
+    'EXECUTE':  'EXEC',
+    'CALL':     'EXEC',
 }
 
 
@@ -635,6 +638,89 @@ def generate_delete_select(parsed: dict) -> str:
 
 
 # ─────────────────────────────────────────────────────────────
+# EXEC / EXECUTE / CALL PARSE & SELECT
+# ─────────────────────────────────────────────────────────────
+
+def parse_exec(stmt: str) -> Optional[dict]:
+    """EXEC / EXECUTE / CALL ifadesini parse eder."""
+    stmt = stmt.strip()
+    m = re.match(
+        r'(?i)(?:EXEC(?:UTE)?|CALL)\s+([\w."$]+(?:\.[\w."$]+)*)\s*(\(.*)?$',
+        stmt, re.DOTALL
+    )
+    if not m:
+        return None
+
+    full_name = m.group(1).strip()
+    parts = [p.strip('"').upper() for p in full_name.split('.')]
+
+    owner = package = proc = None
+    if len(parts) == 1:
+        proc = parts[0]
+    elif len(parts) == 2:
+        owner, proc = parts[0], parts[1]
+    elif len(parts) >= 3:
+        owner, package, proc = parts[0], parts[1], parts[2]
+
+    return {
+        'type': 'EXEC',
+        'owner': owner,
+        'package': package,
+        'proc': proc,
+        'full_name': full_name,
+        'original': stmt,
+    }
+
+
+def generate_exec_select(parsed: dict) -> str:
+    kaynak  = escape_sql(normalize_ws(parsed['original']))
+    owner   = parsed.get('owner')
+    package = parsed.get('package')
+    proc    = parsed['proc']
+    ow_cond = f" AND OWNER = '{owner}'" if owner else ''
+
+    if package:
+        # 3-part: SCHEMA.PACKAGE.PROC
+        display = f"{package}.{proc}"
+        return (
+            f"SELECT\n    '{kaynak}' AS KAYNAK,\n"
+            f"    CASE WHEN COUNT(*) > 0 THEN 'OK' ELSE 'FAIL' END AS STATUS,\n"
+            f"    CASE\n"
+            f"        WHEN COUNT(*) > 0 THEN 'OK: {display} paket prosedürü mevcut'\n"
+            f"        ELSE 'HATA: {display} bulunamadı — EXEC başarısız olacak'\n"
+            f"    END AS SONUC\n"
+            f"FROM ALL_PROCEDURES\n"
+            f"WHERE OBJECT_NAME = '{package}' AND PROCEDURE_NAME = '{proc}'{ow_cond}"
+        )
+    elif owner:
+        # 2-part: SCHEMA.PROC — hem standalone hem paket alt-prosedürü olabilir
+        display = f"{owner}.{proc}"
+        return (
+            f"SELECT\n    '{kaynak}' AS KAYNAK,\n"
+            f"    CASE WHEN COUNT(*) > 0 THEN 'OK' ELSE 'FAIL' END AS STATUS,\n"
+            f"    CASE\n"
+            f"        WHEN COUNT(*) > 0 THEN 'OK: {display} prosedürü/fonksiyonu mevcut'\n"
+            f"        ELSE 'HATA: {display} bulunamadı — EXEC başarısız olacak'\n"
+            f"    END AS SONUC\n"
+            f"FROM ALL_PROCEDURES\n"
+            f"WHERE OWNER = '{owner}'\n"
+            f"  AND (OBJECT_NAME = '{proc}' OR PROCEDURE_NAME = '{proc}')"
+        )
+    else:
+        # Sadece prosedür adı — standalone kontrol
+        return (
+            f"SELECT\n    '{kaynak}' AS KAYNAK,\n"
+            f"    CASE WHEN COUNT(*) > 0 THEN 'OK' ELSE 'FAIL' END AS STATUS,\n"
+            f"    CASE\n"
+            f"        WHEN COUNT(*) > 0 THEN 'OK: {proc} prosedürü/fonksiyonu mevcut'\n"
+            f"        ELSE 'HATA: {proc} bulunamadı — EXEC başarısız olacak'\n"
+            f"    END AS SONUC\n"
+            f"FROM ALL_PROCEDURES\n"
+            f"WHERE OBJECT_NAME = '{proc}' AND PROCEDURE_NAME IS NULL"
+        )
+
+
+# ─────────────────────────────────────────────────────────────
 # ANA DÖNÜŞÜM
 # ─────────────────────────────────────────────────────────────
 
@@ -708,6 +794,23 @@ def convert_sql(sql_text: str) -> dict:
                 })
             else:
                 stats['errors'] += 1; errors.append(f"DELETE parse hatası: {raw[:80]}")
+
+        # ── EXEC / EXECUTE / CALL ──
+        elif stype == 'EXEC':
+            parsed = parse_exec(raw)
+            if parsed:
+                stats['other'] += 1
+                sel = generate_exec_select(parsed)
+                selects.append(sel)
+                proc_label = parsed['full_name']
+                statement_list.append({
+                    'type': 'EXEC', 'table': proc_label,
+                    'original': raw, 'original_short': normalize_ws(raw)[:90],
+                    'select': sel, 'risk': 'PROC', 'has_where': None,
+                    'note': f"Prosedür: {proc_label}",
+                })
+            else:
+                stats['errors'] += 1; errors.append(f"EXEC parse hatası: {raw[:80]}")
 
         # ── DDL (CREATE / ALTER / DROP / TRUNCATE ...) ──
         elif stype == 'DDL':

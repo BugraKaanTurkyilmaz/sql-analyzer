@@ -229,6 +229,7 @@
     .tp-alter    { background:#fff7ed; color:#9a3412; }
     .tp-drop     { background:#fce7f3; color:#9d174d; }
     .tp-truncate { background:#fef2f2; color:#7f1d1d; }
+    .tp-exec     { background:#e0f2fe; color:#0369a1; }
 
     /* Risk badge */
     .rb {
@@ -240,6 +241,7 @@
     .rb-dogru  { background:#eff6ff; color:#1d4ed8; border-color:#bfdbfe; }
     .rb-where  { background:#fffbeb; color:#92400e; border-color:#fde68a; }
     .rb-ddl    { background:#f5f3ff; color:#5b21b6; border-color:#c4b5fd; }
+    .rb-proc   { background:#e0f2fe; color:#0369a1; border-color:#7dd3fc; }
     .rb-kritik {
       background:#fef2f2; color:#991b1b; border-color:#fca5a5;
       animation: pulseRed 1.8s ease-in-out infinite;
@@ -329,6 +331,29 @@
     .op-i { background:#d1fae5; color:#065f46; }
     .op-u { background:#fef3c7; color:#78350f; }
     .op-d { background:#fee2e2; color:#7f1d1d; }
+
+    /* ───── DB Test Sonucu ───── */
+    .db-ok   { display:inline-flex;align-items:center;gap:4px;background:#d1fae5;color:#065f46;padding:3px 9px;border-radius:12px;font-size:.7rem;font-weight:700; }
+    .db-fail { display:inline-flex;align-items:center;gap:4px;background:#fee2e2;color:#7f1d1d;padding:3px 9px;border-radius:12px;font-size:.7rem;font-weight:700; }
+    .db-skip { color:#cbd5e1;font-size:.72rem; }
+    .db-pend { color:#cbd5e1;font-size:.8rem; }
+    .db-result-detail { font-size:.67rem;color:var(--muted);margin-top:2px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+
+    /* ───── DB Bağlantı Paneli ───── */
+    .db-form-label { font-size:.72rem;font-weight:600;color:var(--muted);margin-bottom:3px; }
+    .db-input { width:100%;padding:6px 10px;font-size:.82rem;border:1.5px solid var(--border);border-radius:8px;outline:none;color:var(--text);background:#f8fafc;transition:border-color .18s; }
+    .db-input:focus { border-color:var(--primary);background:#fff; }
+    .btn-test-db {
+      width:100%;padding:10px;
+      background:linear-gradient(135deg,#059669 0%,#047857 100%);
+      color:#fff;border:none;border-radius:10px;
+      font-size:.88rem;font-weight:600;cursor:pointer;
+      box-shadow:0 4px 12px rgba(5,150,105,.25);
+      transition:transform .15s,box-shadow .15s;
+      display:flex;align-items:center;justify-content:center;gap:8px;
+    }
+    .btn-test-db:hover { transform:translateY(-1px);box-shadow:0 6px 18px rgba(5,150,105,.35); }
+    .btn-test-db:disabled { opacity:.6;cursor:not-allowed;transform:none; }
 
     @media(max-width:991px) {
       .stat-box .num { font-size: 1.5rem; }
@@ -432,6 +457,10 @@ Delete from SCHEMA.TABLE;   -- WHERE yok → KRİTİK!"></textarea>
           <div class="legend-row">
             <span class="rb rb-where">⏳ Çalıştır &amp; Gör</span>
             <span class="legend-desc">WHERE var; asıl risk COUNT(*)'a göre belirlenir</span>
+          </div>
+          <div class="legend-row">
+            <span class="rb rb-proc"><i class="bi bi-gear-fill"></i> Prosedür</span>
+            <span class="legend-desc">EXEC/CALL → prosedür varlığı kontrol edilir</span>
           </div>
           <div class="legend-row" style="border:none">
             <span class="rb rb-kritik">⛔ KRİTİK</span>
@@ -619,6 +648,7 @@ const RISK_HTML = {
   DOGRULAMA: '<span class="rb rb-dogru"><i class="bi bi-check-circle-fill"></i> Doğrulama</span>',
   WHERE_VAR:  '<span class="rb rb-where"><i class="bi bi-clock"></i> Çalıştır &amp; Gör</span>',
   DDL:        '<span class="rb rb-ddl"><i class="bi bi-tools"></i> DDL İşlemi</span>',
+  PROC:       '<span class="rb rb-proc"><i class="bi bi-gear-fill"></i> Prosedür Çağrısı</span>',
   KRITIK:     '<span class="rb rb-kritik"><i class="bi bi-exclamation-octagon-fill"></i> KRİTİK – WHERE YOK</span>',
 };
 const TYPE_HTML = {
@@ -629,6 +659,7 @@ const TYPE_HTML = {
   ALTER:    '<span class="tp tp-alter">ALTER</span>',
   DROP:     '<span class="tp tp-drop">DROP</span>',
   TRUNCATE: '<span class="tp tp-truncate">TRUNCATE</span>',
+  EXEC:     '<span class="tp tp-exec">EXEC</span>',
 };
 
 /* ── Ana dönüşüm ── */
