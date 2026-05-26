@@ -204,32 +204,52 @@ def stmt_type(stmt: str) -> str:
 
 def parse_insert(stmt: str) -> Optional[dict]:
     stmt = stmt.strip()
+
+    # Form 1: INSERT INTO table (cols) VALUES (vals)
     m = re.compile(
         r'(?i)INSERT\s+INTO\s+([\w."$]+(?:\.[\w."$]+)*)\s*\(([^)]+)\)\s*VALUES?\s*\('
     ).match(stmt)
-    if not m:
-        return None
-    table = m.group(1).strip()
-    cols  = [c.strip() for c in m.group(2).strip().split(',')]
-    vals_start, depth, in_str, i = m.end(), 1, False, m.end()
-    while i < len(stmt) and depth > 0:
-        c = stmt[i]
-        if in_str:
-            if c == "'":
-                if i + 1 < len(stmt) and stmt[i + 1] == "'": i += 2; continue
-                in_str = False
-        elif c == "'": in_str = True
-        elif c == '(': depth += 1
-        elif c == ')':
-            depth -= 1
-            if depth == 0: break
-        i += 1
-    vals  = tokenize_csv(stmt[vals_start:i])
-    error = None
-    if len(cols) != len(vals):
-        error = f'Sütun ({len(cols)}) ≠ Değer ({len(vals)}) sayısı'
-    return {'type': 'INSERT', 'table': table, 'columns': cols, 'values': vals,
-            'original': stmt, 'error': error}
+    if m:
+        table = m.group(1).strip()
+        cols  = [c.strip() for c in m.group(2).strip().split(',')]
+        vals_start, depth, in_str, i = m.end(), 1, False, m.end()
+        while i < len(stmt) and depth > 0:
+            c = stmt[i]
+            if in_str:
+                if c == "'":
+                    if i + 1 < len(stmt) and stmt[i + 1] == "'": i += 2; continue
+                    in_str = False
+            elif c == "'": in_str = True
+            elif c == '(': depth += 1
+            elif c == ')':
+                depth -= 1
+                if depth == 0: break
+            i += 1
+        vals  = tokenize_csv(stmt[vals_start:i])
+        error = None
+        if len(cols) != len(vals):
+            error = f'Sütun ({len(cols)}) ≠ Değer ({len(vals)}) sayısı'
+        return {'type': 'INSERT', 'table': table, 'columns': cols, 'values': vals,
+                'original': stmt, 'error': error}
+
+    # Form 2: INSERT INTO table [(cols)] SELECT ...
+    m2 = re.match(
+        r'(?i)INSERT\s+INTO\s+([\w."$]+(?:\.[\w."$]+)*)\s*(?:\([^)]+\))?\s*SELECT\b',
+        stmt
+    )
+    if m2:
+        table = m2.group(1).strip()
+        return {'type': 'INSERT_SELECT', 'table': table, 'columns': [], 'values': [],
+                'original': stmt, 'error': None}
+
+    # Form 3: tablo adı çıkarılabiliyorsa genel fallback
+    m3 = re.match(r'(?i)INSERT\s+INTO\s+([\w."$]+(?:\.[\w."$]+)*)', stmt)
+    if m3:
+        table = m3.group(1).strip()
+        return {'type': 'INSERT_UNKNOWN', 'table': table, 'columns': [], 'values': [],
+                'original': stmt, 'error': 'VALUES veya SELECT bulunamadı'}
+
+    return None
 
 
 def parse_update(stmt: str) -> Optional[dict]:
@@ -575,10 +595,33 @@ def generate_ddl_select(parsed: dict) -> Optional[str]:
 
 def generate_insert_select(parsed: dict) -> str:
     kaynak = escape_sql(normalize_ws(parsed['original']))
+    ptype  = parsed.get('type', 'INSERT')
+
+    # INSERT...SELECT veya bilinmeyen form → hedef tablo varlık kontrolü
+    if ptype in ('INSERT_SELECT', 'INSERT_UNKNOWN'):
+        table = parsed['table']
+        owner, tname = _owner_name(table)
+        ow_cond = f" AND OWNER = '{owner}'" if owner else ''
+        label = 'INSERT...SELECT' if ptype == 'INSERT_SELECT' else 'INSERT (belirsiz form)'
+        return (
+            f"SELECT\n    '{kaynak}' AS KAYNAK,\n"
+            f"    CASE WHEN COUNT(*) > 0 THEN 'OK' ELSE 'FAIL' END AS STATUS,\n"
+            f"    CASE\n"
+            f"        WHEN COUNT(*) > 0 THEN 'OK: {tname} hedef tablosu mevcut ({label})'\n"
+            f"        ELSE 'HATA: {tname} tablosu bulunamadı'\n"
+            f"    END AS SONUC\n"
+            f"FROM ALL_TABLES\n"
+            f"WHERE TABLE_NAME = '{tname}'{ow_cond}"
+        )
+
+    # Standart INSERT...VALUES — parse hatası varsa
     if parsed.get('error'):
+        err = parsed['error']
         return (f"SELECT\n    '{kaynak}' AS KAYNAK,\n"
                 f"    'FAIL'                               AS STATUS,\n"
-                f"    'PARSE HATASI: {parsed['error']}' AS SONUC\nFROM DUAL")
+                f"    'PARSE HATASI: {err}' AS SONUC\nFROM DUAL")
+
+    # Standart INSERT...VALUES — normal doğrulama
     cols, vals, table = parsed['columns'], parsed['values'], parsed['table']
     where = '\n    AND '.join(value_to_where(c, v) for c, v in zip(cols, vals))
     return (f"SELECT\n    '{kaynak}' AS KAYNAK,\n"
@@ -746,11 +789,18 @@ def convert_sql(sql_text: str) -> dict:
                 stats['insert'] += 1
                 sel = generate_insert_select(parsed)
                 selects.append(sel)
+                ptype = parsed.get('type', 'INSERT')
+                if ptype == 'INSERT_SELECT':
+                    note = 'INSERT...SELECT'
+                elif ptype == 'INSERT_UNKNOWN':
+                    note = 'Belirsiz form'
+                else:
+                    note = f"{len(parsed['columns'])} sütun"
                 statement_list.append({
                     'type': 'INSERT', 'table': parsed['table'],
                     'original': raw, 'original_short': normalize_ws(raw)[:90],
                     'select': sel, 'risk': 'DOGRULAMA', 'has_where': None,
-                    'note': f"{len(parsed['columns'])} sütun",
+                    'note': note,
                 })
                 if parsed.get('error'):
                     stats['errors'] += 1; errors.append(parsed['error'])
