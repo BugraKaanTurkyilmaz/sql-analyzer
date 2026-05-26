@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="tr">
+<html lang="tr" data-theme="light">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,17 +9,43 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
-      --primary: #4f46e5;
+      --primary:      #4f46e5;
       --primary-glow: rgba(79,70,229,.25);
-      --danger:  #dc2626;
-      --warn:    #d97706;
-      --success: #059669;
-      --bg:      #f1f5f9;
-      --surface: #ffffff;
-      --border:  #e2e8f0;
-      --muted:   #64748b;
-      --text:    #0f172a;
-      --code-bg: #0d1117;
+      --danger:       #dc2626;
+      --warn:         #d97706;
+      --success:      #059669;
+      --bg:           #f1f5f9;
+      --surface:      #ffffff;
+      --surface-2:    #f8fafc;
+      --border:       #e2e8f0;
+      --muted:        #64748b;
+      --text:         #0f172a;
+      --code-bg:      #0d1117;
+      --input-bg:     #f8fafc;
+      --tbl-head-bg:  #f1f5f9;
+      --tbl-hover:    #f8fafc;
+      --row-kritik:   #fff5f5;
+      --row-kritik-h: #fee2e2;
+      --row-hata:     #fff7ed;
+      --row-hata-h:   #ffedd5;
+    }
+
+    [data-theme="dark"] {
+      --bg:           #0b0f1a;
+      --surface:      #141b2d;
+      --surface-2:    #1a2236;
+      --border:       #2a3450;
+      --muted:        #8892a4;
+      --text:         #e2e8f0;
+      --code-bg:      #060912;
+      --input-bg:     #1a2236;
+      --tbl-head-bg:  #0b0f1a;
+      --tbl-hover:    #1a2236;
+      --row-kritik:   #2d1515;
+      --row-kritik-h: #3d1a1a;
+      --row-hata:     #2d1f0a;
+      --row-hata-h:   #3d2a0e;
+      --primary-glow: rgba(79,70,229,.15);
     }
 
     * { box-sizing: border-box; }
@@ -30,6 +56,7 @@
       color: var(--text);
       min-height: 100vh;
       margin: 0;
+      transition: background-color .25s, color .25s;
     }
 
     /* ───── Üst Başlık ───── */
@@ -60,16 +87,6 @@
       color: #a5b4fc;
       margin-top: 4px;
       letter-spacing: .01em;
-    }
-    .pill-oracle {
-      background: rgba(255,255,255,.08);
-      border: 1px solid rgba(255,255,255,.18);
-      color: #c7d2fe;
-      font-size: .7rem;
-      font-weight: 600;
-      padding: 4px 12px;
-      border-radius: 20px;
-      letter-spacing: .04em;
     }
 
     /* ───── Kart / Panel ───── */
@@ -126,20 +143,20 @@
       padding: 13px 14px;
       resize: vertical; min-height: 280px;
       outline: none; color: var(--text);
-      background: #f8fafc;
-      transition: border-color .18s, background .18s;
+      background: var(--input-bg);
+      transition: border-color .25s, background .25s, color .25s;
     }
-    .sql-ta:focus { border-color: var(--primary); background: #fff; }
+    .sql-ta:focus { border-color: var(--primary); background: var(--surface); }
 
     /* ───── Drop Zone ───── */
     .drop-zone {
-      border: 2px dashed #cbd5e1;
+      border: 2px dashed var(--border);
       border-radius: 12px; padding: 52px 20px;
       text-align: center; cursor: pointer;
-      background: #f8fafc; transition: all .2s;
+      background: var(--input-bg); transition: all .25s;
     }
     .drop-zone:hover, .drop-zone.drag-over {
-      border-color: var(--primary); background: #eef2ff;
+      border-color: var(--primary); background: var(--surface-2);
     }
     .dz-icon { font-size: 2.8rem; color: #a5b4fc; }
 
@@ -202,22 +219,23 @@
 
     .risk-tbl { width: 100%; border-collapse: collapse; font-size: .82rem; }
     .risk-tbl thead th {
-      /* Yapışkan başlık */
       position: sticky; top: 0; z-index: 2;
-      background: #f1f5f9; font-size: .7rem; font-weight: 600;
+      background: var(--tbl-head-bg); font-size: .7rem; font-weight: 600;
       text-transform: uppercase; letter-spacing: .07em; color: var(--muted);
       padding: 9px 14px; border-bottom: 2px solid var(--border); white-space: nowrap;
       box-shadow: 0 1px 0 var(--border);
+      transition: background .25s, color .25s;
     }
     .risk-tbl td {
       padding: 9px 14px; border-bottom: 1px solid var(--border); vertical-align: middle;
+      transition: background .25s, color .25s, border-color .25s;
     }
     .risk-tbl tr:last-child td { border-bottom: none; }
-    .risk-tbl tr:hover td { background: #f8fafc; }
-    .risk-tbl tr.row-kritik td { background: #fff5f5; }
-    .risk-tbl tr.row-kritik:hover td { background: #fee2e2; }
-    .risk-tbl tr.row-hata td { background: #fff7ed; }
-    .risk-tbl tr.row-hata:hover td { background: #ffedd5; }
+    .risk-tbl tr:hover td { background: var(--tbl-hover); }
+    .risk-tbl tr.row-kritik td { background: var(--row-kritik); }
+    .risk-tbl tr.row-kritik:hover td { background: var(--row-kritik-h); }
+    .risk-tbl tr.row-hata td { background: var(--row-hata); }
+    .risk-tbl tr.row-hata:hover td { background: var(--row-hata-h); }
 
     /* Tip badge */
     .tp {
@@ -293,7 +311,7 @@
 
     /* ───── Kılavuz Kartı ───── */
     .legend-row { display: flex; align-items: center; gap: 10px; padding: 6px 0; font-size: .8rem; }
-    .legend-row:not(:last-child) { border-bottom: 1px solid #f1f5f9; }
+    .legend-row:not(:last-child) { border-bottom: 1px solid var(--border); }
     .legend-desc { color: var(--muted); }
 
     /* ───── Spinner ───── */
@@ -320,14 +338,15 @@
     .tbl-summary { width:100%; border-collapse:collapse; font-size:.82rem; }
     .tbl-summary thead th {
       position: sticky; top: 0; z-index: 2;
-      background:#f1f5f9; font-size:.7rem; font-weight:600;
+      background: var(--tbl-head-bg); font-size:.7rem; font-weight:600;
       text-transform:uppercase; letter-spacing:.07em; color:var(--muted);
       padding:8px 14px; border-bottom:2px solid var(--border); white-space:nowrap;
       box-shadow: 0 1px 0 var(--border);
+      transition: background .25s, color .25s;
     }
-    .tbl-summary td { padding:8px 14px; border-bottom:1px solid var(--border); vertical-align:middle; }
+    .tbl-summary td { padding:8px 14px; border-bottom:1px solid var(--border); vertical-align:middle; transition: background .25s, border-color .25s; }
     .tbl-summary tr:last-child td { border-bottom:none; }
-    .tbl-summary tr:hover td { background:#f8fafc; }
+    .tbl-summary tr:hover td { background: var(--tbl-hover); }
     .op-count {
       display:inline-flex; align-items:center; gap:4px;
       padding:2px 8px; border-radius:12px; font-size:.72rem; font-weight:600;
@@ -345,8 +364,8 @@
 
     /* ───── DB Bağlantı Paneli ───── */
     .db-form-label { font-size:.72rem;font-weight:600;color:var(--muted);margin-bottom:3px; }
-    .db-input { width:100%;padding:6px 10px;font-size:.82rem;border:1.5px solid var(--border);border-radius:8px;outline:none;color:var(--text);background:#f8fafc;transition:border-color .18s; }
-    .db-input:focus { border-color:var(--primary);background:#fff; }
+    .db-input { width:100%;padding:6px 10px;font-size:.82rem;border:1.5px solid var(--border);border-radius:8px;outline:none;color:var(--text);background:var(--input-bg);transition:border-color .25s, background .25s, color .25s; }
+    .db-input:focus { border-color:var(--primary);background:var(--surface); }
     .btn-test-db {
       width:100%;padding:10px;
       background:linear-gradient(135deg,#059669 0%,#047857 100%);
@@ -358,6 +377,46 @@
     }
     .btn-test-db:hover { transform:translateY(-1px);box-shadow:0 6px 18px rgba(5,150,105,.35); }
     .btn-test-db:disabled { opacity:.6;cursor:not-allowed;transform:none; }
+
+    /* ───── Geçiş Animasyonları ───── */
+    .panel, .panel-hdr, .tab-bar, .tab-btn, .stat-box,
+    .btn-hdr, .btn-convert, .site-header { transition: background-color .25s, border-color .25s, color .25s; }
+
+    /* ───── Dark Mode — Stat Kutuları ───── */
+    [data-theme="dark"] .sb-total  { background:#020617; border-color:#1e293b; color:#94a3b8; }
+    [data-theme="dark"] .sb-insert { background:#0d2b1e; border-color:#14532d; color:#4ade80; }
+    [data-theme="dark"] .sb-update { background:#2d2006; border-color:#713f12; color:#fbbf24; }
+    [data-theme="dark"] .sb-delete { background:#2d0b0b; border-color:#7f1d1d; color:#f87171; }
+    [data-theme="dark"] .sb-ddl    { background:#1e1b3a; border-color:#4c1d95; color:#a78bfa; }
+    [data-theme="dark"] .sb-other  { background:#1a2236; border-color:#2a3450; color:#94a3b8; }
+
+    /* ───── Dark Mode — Panel & Genel ───── */
+    [data-theme="dark"] .panel { background: var(--surface); border-color: var(--border); }
+    [data-theme="dark"] .panel-hdr { border-color: var(--border); }
+    [data-theme="dark"] .tab-bar { border-color: var(--border); }
+    [data-theme="dark"] .tab-btn { color: var(--muted); }
+    [data-theme="dark"] .tab-btn.active { color: var(--primary); }
+    [data-theme="dark"] .btn-hdr { border-color: #2a3450; color: #8892a4; }
+    [data-theme="dark"] .btn-hdr:hover { border-color: var(--primary); color: #a5b4fc; }
+    [data-theme="dark"] .alert-warning { background: #2d2006; border-color: #713f12; color: #fbbf24; }
+    [data-theme="dark"] .tbl-scroll-wrap::-webkit-scrollbar-track { background: #0b0f1a; }
+    [data-theme="dark"] .tbl-scroll-wrap::-webkit-scrollbar-thumb { background: #2a3450; }
+    [data-theme="dark"] .critical-banner { background: linear-gradient(135deg,#2d0b0b 0%,#3d1212 100%); }
+
+    /* ───── Dark Mode — Theme Toggle Butonu ───── */
+    .theme-toggle {
+      background: rgba(255,255,255,.08);
+      border: 1px solid rgba(255,255,255,.15);
+      color: #c7d2fe;
+      padding: 7px 14px;
+      border-radius: 20px;
+      cursor: pointer;
+      display: flex; align-items: center; gap: 7px;
+      font-size: .78rem; font-weight: 600;
+      letter-spacing: .02em;
+      transition: all .2s;
+    }
+    .theme-toggle:hover { background: rgba(255,255,255,.14); border-color: rgba(255,255,255,.28); }
 
     @media(max-width:991px) {
       .stat-box .num { font-size: 1.5rem; }
@@ -372,13 +431,16 @@
     <div>
       <div class="logo">
         <div class="shield">🛡️</div>
-        SQL Risk Analizi &amp; Doğrulama
+        SQL Analyzer
       </div>
       <div class="tagline">
-        INSERT doğrulama &nbsp;·&nbsp; UPDATE / DELETE risk analizi &nbsp;·&nbsp; Oracle SQL uyumlu çıktı
+        Script Analizi &nbsp;·&nbsp; Risk Değerlendirmesi &nbsp;·&nbsp; Doğrulama Sorguları
       </div>
     </div>
-    <span class="pill-oracle">ORACLE SQL</span>
+    <button class="theme-toggle" onclick="toggleTheme()" id="themeBtn">
+      <i class="bi bi-moon-fill" id="themeIcon"></i>
+      <span id="themeTxt">Dark</span>
+    </button>
   </div>
 </header>
 
@@ -613,6 +675,29 @@ Delete from SCHEMA.TABLE;   -- WHERE yok → KRİTİK!"></textarea>
 </form>
 
 <script>
+/* ── Dark Mode ── */
+(function() {
+  const saved = localStorage.getItem('theme') || 'light';
+  document.documentElement.setAttribute('data-theme', saved);
+})();
+
+function toggleTheme() {
+  const html    = document.documentElement;
+  const isDark  = html.getAttribute('data-theme') === 'dark';
+  const next    = isDark ? 'light' : 'dark';
+  html.setAttribute('data-theme', next);
+  localStorage.setItem('theme', next);
+  document.getElementById('themeIcon').className = next === 'dark' ? 'bi bi-sun-fill' : 'bi bi-moon-fill';
+  document.getElementById('themeTxt').textContent = next === 'dark' ? 'Light' : 'Dark';
+}
+
+// Sayfa yüklenince ikonu senkronize et
+document.addEventListener('DOMContentLoaded', function() {
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  document.getElementById('themeIcon').className = isDark ? 'bi bi-sun-fill' : 'bi bi-moon-fill';
+  document.getElementById('themeTxt').textContent = isDark ? 'Light' : 'Dark';
+});
+
 let currentTab  = 'text';
 let fileContent = null;
 let outputText  = '';
