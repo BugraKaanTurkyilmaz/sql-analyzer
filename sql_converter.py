@@ -148,17 +148,29 @@ def normalize_ws(sql: str) -> str:
     return re.sub(r'\s+', ' ', sql).strip()
 
 
+_DYNAMIC_RE = re.compile(
+    r'''(?ix)^(
+        SYSDATE
+        | SYSTIMESTAMP
+        | SYS\_GUID\s*\(\s*\)
+        | [\w$#][\w$#]*\.NEXTVAL
+        | [\w$#][\w$#]*\.CURRVAL
+    )$'''
+)
+
+
+def is_dynamic_value(val: str) -> bool:
+    """SYSDATE/SYSTIMESTAMP/NEXTVAL gibi çalışma-anı değerleri döndürür."""
+    return bool(_DYNAMIC_RE.match(val.strip()))
+
+
 def value_to_where(col: str, val: str) -> str:
     val = val.strip()
     upper = val.upper()
-    if upper == 'SYSDATE':
-        return f"TRUNC({col}) = TRUNC(SYSDATE)"
-    elif upper == 'NULL':
+    if upper == 'NULL':
         return f"{col} IS NULL"
     elif re.match(r'(?i)^(TO_DATE|TO_TIMESTAMP)\s*\(', val):
         return f"TRUNC({col}) = TRUNC({val})"
-    elif re.match(r'(?i)^SYSTIMESTAMP\b', val):
-        return f"TRUNC({col}) = TRUNC(SYSDATE)"
     elif val.startswith("'") and val.endswith("'"):
         return f"{col} = {val}"
     elif re.match(r'^-?\d+(\.\d+)?$', val):
@@ -623,11 +635,24 @@ def generate_insert_select(parsed: dict) -> str:
 
     # Standart INSERT...VALUES — normal doğrulama
     cols, vals, table = parsed['columns'], parsed['values'], parsed['table']
-    where = '\n    AND '.join(value_to_where(c, v) for c, v in zip(cols, vals))
+
+    static_pairs  = [(c, v) for c, v in zip(cols, vals) if not is_dynamic_value(v)]
+    skipped_cols  = [c for c, v in zip(cols, vals) if is_dynamic_value(v)]
+    skip_note     = f" (dinamik sütunlar atlandı: {', '.join(skipped_cols)})" if skipped_cols else ""
+
+    if static_pairs:
+        where_clause = "WHERE " + '\n    AND '.join(value_to_where(c, v) for c, v in static_pairs)
+        ok_msg   = f"'OK{skip_note}'"
+        fail_msg = f"'FAIL{skip_note}'"
+    else:
+        where_clause = "/* Tüm değerler dinamik (SYSDATE vb.) — WHERE üretilemedi, tablo varlığı kontrol ediliyor */"
+        ok_msg   = "'OK — tablo dolu (tüm değerler dinamik, satır-bazlı doğrulama yapılamadı)'"
+        fail_msg = "'FAIL — tablo boş'"
+
     return (f"SELECT\n    '{kaynak}' AS KAYNAK,\n"
             f"    CASE WHEN COUNT(*) > 0 THEN 'OK' ELSE 'FAIL' END AS STATUS,\n"
-            f"    CASE\n        WHEN COUNT(*) > 0 THEN 'OK'\n        ELSE 'FAIL'\n    END AS SONUC\n"
-            f"FROM {table}\nWHERE {where}")
+            f"    CASE\n        WHEN COUNT(*) > 0 THEN {ok_msg}\n        ELSE {fail_msg}\n    END AS SONUC\n"
+            f"FROM {table}\n{where_clause}")
 
 
 def generate_update_select(parsed: dict) -> str:
