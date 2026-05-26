@@ -533,6 +533,7 @@ Delete from SCHEMA.TABLE;   -- WHERE yok → KRİTİK!"></textarea>
               <button class="btn-hdr" style="font-size:.72rem;padding:3px 10px" onclick="filterRisk('ALL')" id="fAll">Tümü</button>
               <button class="btn-hdr" style="font-size:.72rem;padding:3px 10px;color:#dc2626;border-color:#fca5a5" onclick="filterRisk('KRITIK')" id="fKritik">⛔ Kritik</button>
               <button class="btn-hdr" style="font-size:.72rem;padding:3px 10px;color:#5b21b6;border-color:#c4b5fd" onclick="filterRisk('DDL')" id="fDdl">DDL</button>
+              <button class="btn-hdr" style="font-size:.72rem;padding:3px 10px;color:#0369a1;border-color:#7dd3fc" onclick="filterRisk('EXEC')" id="fExec">EXEC</button>
             </div>
           </div>
           <div class="tbl-scroll-wrap">
@@ -781,11 +782,19 @@ function renderResult(data) {
 /* ── Risk tablosu filtresi ── */
 let allStatements = [];
 
+const FILTER_BTNS = {
+  ALL:    { id: 'fAll',    bg: '#4f46e5', color: '#fff', border: '#4f46e5' },
+  KRITIK: { id: 'fKritik', bg: '#dc2626', color: '#fff', border: '#dc2626' },
+  DDL:    { id: 'fDdl',    bg: '#5b21b6', color: '#fff', border: '#5b21b6' },
+  EXEC:   { id: 'fExec',   bg: '#0369a1', color: '#fff', border: '#0369a1' },
+};
+
 function filterRisk(type) {
-  ['fAll','fKritik','fDdl'].forEach(id => {
+  Object.values(FILTER_BTNS).forEach(({ id }) => {
     const el = document.getElementById(id);
     el.style.background = '';
-    el.style.color = el.dataset.origColor || '';
+    el.style.color = '';
+    el.style.borderColor = '';
   });
 
   const rows = document.querySelectorAll('#riskBody tr');
@@ -797,12 +806,12 @@ function filterRisk(type) {
   });
   document.getElementById('riskRowCount').textContent = `(${visible} / ${rows.length} ifade)`;
 
-  const activeBtn = { ALL:'fAll', KRITIK:'fKritik', DDL:'fDdl' }[type];
-  if (activeBtn) {
-    const btn = document.getElementById(activeBtn);
-    btn.style.background = '#4f46e5';
-    btn.style.color = '#fff';
-    btn.style.borderColor = '#4f46e5';
+  const active = FILTER_BTNS[type];
+  if (active) {
+    const btn = document.getElementById(active.id);
+    btn.style.background  = active.bg;
+    btn.style.color       = active.color;
+    btn.style.borderColor = active.border;
   }
 }
 
