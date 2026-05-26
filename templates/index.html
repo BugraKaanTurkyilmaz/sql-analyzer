@@ -165,6 +165,7 @@
     }
     .stat-box .num { font-size: 1.9rem; font-weight: 700; line-height: 1; }
     .stat-box .lbl { font-size: .67rem; font-weight: 600; text-transform: uppercase; letter-spacing: .07em; margin-top: 5px; }
+    .sb-total  { background:#0f172a; border-color:#334155; color:#f1f5f9; }
     .sb-insert { background:#ecfdf5; border-color:#a7f3d0; color:#059669; }
     .sb-update { background:#fffbeb; border-color:#fde68a; color:#b45309; }
     .sb-delete { background:#fef2f2; border-color:#fecaca; color:#dc2626; }
@@ -489,7 +490,11 @@ Delete from SCHEMA.TABLE;   -- WHERE yok → KRİTİK!"></textarea>
       <div id="resultBlock" style="display:none" class="d-flex flex-column gap-3">
 
         <!-- İstatistik Kartları -->
-        <div class="stat-row" style="grid-template-columns:repeat(5,1fr)">
+        <div class="stat-row" style="grid-template-columns:repeat(6,1fr)">
+          <div class="stat-box sb-total" title="Toplam ifade sayısı">
+            <div class="num" id="sTotal">0</div>
+            <div class="lbl">TOPLAM</div>
+          </div>
           <div class="stat-box sb-insert">
             <div class="num" id="sInsert">0</div>
             <div class="lbl">INSERT</div>
@@ -506,7 +511,7 @@ Delete from SCHEMA.TABLE;   -- WHERE yok → KRİTİK!"></textarea>
             <div class="num" id="sDdl">0</div>
             <div class="lbl">DDL</div>
           </div>
-          <div class="stat-box sb-other" title="SELECT, COMMIT, ROLLBACK ve tanınamayan ifadeler">
+          <div class="stat-box sb-other" title="SELECT, COMMIT, ROLLBACK, EXEC ve diğer ifadeler">
             <div class="num" id="sOther">0</div>
             <div class="lbl">Diğer</div>
           </div>
@@ -694,6 +699,7 @@ function renderResult(data) {
   outputText = data.output;
 
   /* İstatistikler */
+  document.getElementById('sTotal').textContent  = data.stats.total;
   document.getElementById('sInsert').textContent = data.stats.insert;
   document.getElementById('sUpdate').textContent = data.stats.update;
   document.getElementById('sDelete').textContent = data.stats.delete;

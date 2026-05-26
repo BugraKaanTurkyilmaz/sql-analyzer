@@ -863,6 +863,8 @@ def convert_sql(sql_text: str) -> dict:
                 table_summary[tbl] = {'INSERT': 0, 'UPDATE': 0, 'DELETE': 0}
             table_summary[tbl][s['type']] += 1
 
+    stats['total'] = stats['insert'] + stats['update'] + stats['delete'] + stats['ddl'] + stats['other']
+
     return {
         'selects': selects,
         'statements': statement_list,
