@@ -850,9 +850,9 @@ def convert_sql(sql_text: str) -> dict:
                 'has_check': ddl_sel is not None,
             })
 
-        # ── Diğer (SELECT, COMMIT, vs.) ──
+        # ── Diğer (SELECT, COMMIT, ROLLBACK, vs.) — sayılmaz, atlanır ──
         else:
-            stats['other'] += 1
+            pass
 
     # Tablo özeti — sadece DML işlemleri
     table_summary: dict = {}
@@ -863,7 +863,7 @@ def convert_sql(sql_text: str) -> dict:
                 table_summary[tbl] = {'INSERT': 0, 'UPDATE': 0, 'DELETE': 0}
             table_summary[tbl][s['type']] += 1
 
-    stats['total'] = stats['insert'] + stats['update'] + stats['delete'] + stats['ddl'] + stats['other']
+    stats['total'] = len(statement_list)
 
     return {
         'selects': selects,
