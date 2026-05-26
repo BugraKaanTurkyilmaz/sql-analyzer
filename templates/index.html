@@ -216,6 +216,8 @@
     .risk-tbl tr:hover td { background: #f8fafc; }
     .risk-tbl tr.row-kritik td { background: #fff5f5; }
     .risk-tbl tr.row-kritik:hover td { background: #fee2e2; }
+    .risk-tbl tr.row-hata td { background: #fff7ed; }
+    .risk-tbl tr.row-hata:hover td { background: #ffedd5; }
 
     /* Tip badge */
     .tp {
@@ -243,6 +245,7 @@
     .rb-where  { background:#fffbeb; color:#92400e; border-color:#fde68a; }
     .rb-ddl    { background:#f5f3ff; color:#5b21b6; border-color:#c4b5fd; }
     .rb-proc   { background:#e0f2fe; color:#0369a1; border-color:#7dd3fc; }
+    .rb-hata   { background:#fff7ed; color:#c2410c; border-color:#fdba74; }
     .rb-kritik {
       background:#fef2f2; color:#991b1b; border-color:#fca5a5;
       animation: pulseRed 1.8s ease-in-out infinite;
@@ -539,6 +542,7 @@ Delete from SCHEMA.TABLE;   -- WHERE yok → KRİTİK!"></textarea>
               <button class="btn-hdr" style="font-size:.72rem;padding:3px 10px;color:#dc2626;border-color:#fca5a5" onclick="filterRisk('KRITIK')" id="fKritik">⛔ Kritik</button>
               <button class="btn-hdr" style="font-size:.72rem;padding:3px 10px;color:#5b21b6;border-color:#c4b5fd" onclick="filterRisk('DDL')" id="fDdl">DDL</button>
               <button class="btn-hdr" style="font-size:.72rem;padding:3px 10px;color:#0369a1;border-color:#7dd3fc" onclick="filterRisk('EXEC')" id="fExec">EXEC</button>
+              <button class="btn-hdr" style="font-size:.72rem;padding:3px 10px;color:#c2410c;border-color:#fdba74" onclick="filterRisk('HATA')" id="fHata">⚠ Hata</button>
             </div>
           </div>
           <div class="tbl-scroll-wrap">
@@ -655,6 +659,7 @@ const RISK_HTML = {
   WHERE_VAR:  '<span class="rb rb-where"><i class="bi bi-clock"></i> Çalıştır &amp; Gör</span>',
   DDL:        '<span class="rb rb-ddl"><i class="bi bi-tools"></i> DDL İşlemi</span>',
   PROC:       '<span class="rb rb-proc"><i class="bi bi-gear-fill"></i> Prosedür Çağrısı</span>',
+  HATA:       '<span class="rb rb-hata"><i class="bi bi-x-circle-fill"></i> Parse Hatası</span>',
   KRITIK:     '<span class="rb rb-kritik"><i class="bi bi-exclamation-octagon-fill"></i> KRİTİK – WHERE YOK</span>',
 };
 const TYPE_HTML = {
@@ -722,11 +727,15 @@ function renderResult(data) {
   const stmts = data.statements || [];
   tbody.innerHTML = stmts.map((s, i) => {
     const isKritik = s.risk === 'KRITIK';
+    const isHata   = s.risk === 'HATA';
     const noteHtml = isKritik
       ? `<span class="note-warn"><i class="bi bi-exclamation-triangle-fill me-1"></i>${escHtml(s.note)}</span>`
+      : isHata
+      ? `<span class="note-warn" style="color:#c2410c"><i class="bi bi-x-circle-fill me-1"></i>${escHtml(s.note)}</span>`
       : `<span class="note-text">${escHtml(s.note || '')}</span>`;
+    const rowClass = isKritik ? 'row-kritik' : isHata ? 'row-hata' : '';
     return `
-      <tr class="${isKritik ? 'row-kritik' : ''}" data-risk="${s.risk}" data-type="${s.type}">
+      <tr class="${rowClass}" data-risk="${s.risk}" data-type="${s.type}">
         <td style="color:var(--muted);font-size:.75rem;width:32px">${i + 1}</td>
         <td>${TYPE_HTML[s.type] || s.type}</td>
         <td>
@@ -793,6 +802,7 @@ const FILTER_BTNS = {
   KRITIK: { id: 'fKritik', bg: '#dc2626', color: '#fff', border: '#dc2626' },
   DDL:    { id: 'fDdl',    bg: '#5b21b6', color: '#fff', border: '#5b21b6' },
   EXEC:   { id: 'fExec',   bg: '#0369a1', color: '#fff', border: '#0369a1' },
+  HATA:   { id: 'fHata',   bg: '#c2410c', color: '#fff', border: '#c2410c' },
 };
 
 function filterRisk(type) {

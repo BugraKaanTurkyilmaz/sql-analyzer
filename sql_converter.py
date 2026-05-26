@@ -790,22 +790,40 @@ def convert_sql(sql_text: str) -> dict:
                 sel = generate_insert_select(parsed)
                 selects.append(sel)
                 ptype = parsed.get('type', 'INSERT')
+                parse_err = parsed.get('error')
+
                 if ptype == 'INSERT_SELECT':
-                    note = 'INSERT...SELECT'
+                    risk, note = 'DOGRULAMA', 'INSERT...SELECT'
                 elif ptype == 'INSERT_UNKNOWN':
-                    note = 'Belirsiz form'
+                    risk = 'HATA'
+                    note = parse_err or 'VALUES veya SELECT bulunamadı'
+                    stats['errors'] += 1; errors.append(note)
+                elif parse_err:
+                    risk = 'HATA'
+                    note = parse_err
+                    stats['errors'] += 1; errors.append(parse_err)
                 else:
+                    risk = 'DOGRULAMA'
                     note = f"{len(parsed['columns'])} sütun"
+
                 statement_list.append({
                     'type': 'INSERT', 'table': parsed['table'],
                     'original': raw, 'original_short': normalize_ws(raw)[:90],
-                    'select': sel, 'risk': 'DOGRULAMA', 'has_where': None,
+                    'select': sel, 'risk': risk, 'has_where': None,
                     'note': note,
                 })
-                if parsed.get('error'):
-                    stats['errors'] += 1; errors.append(parsed['error'])
             else:
-                stats['errors'] += 1; errors.append(f"INSERT parse hatası: {raw[:80]}")
+                # Tablo adı bile çıkarılamadı
+                stats['insert'] += 1
+                stats['errors'] += 1
+                err_note = 'INSERT parse hatası: tablo adı tespit edilemedi'
+                errors.append(f"{err_note}: {raw[:80]}")
+                statement_list.append({
+                    'type': 'INSERT', 'table': '?',
+                    'original': raw, 'original_short': normalize_ws(raw)[:90],
+                    'select': None, 'risk': 'HATA', 'has_where': None,
+                    'note': err_note,
+                })
 
         # ── UPDATE ──
         elif stype == 'UPDATE':
