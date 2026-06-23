@@ -164,12 +164,21 @@ def is_dynamic_value(val: str) -> bool:
     return bool(_DYNAMIC_RE.match(val.strip()))
 
 
+def _unnormalize_plsql_string(val: str) -> str:
+    """''metin'' → 'metin'  (PL/SQL EXECUTE IMMEDIATE çift tırnak kaçışı)"""
+    if val.startswith("''") and val.endswith("''") and len(val) > 4:
+        return "'" + val[2:-2].replace("''", "'") + "'"
+    return val
+
+
 def value_to_where(col: str, val: str) -> str:
     val = val.strip()
+    val = _unnormalize_plsql_string(val)
     upper = val.upper()
     if upper == 'NULL':
         return f"{col} IS NULL"
     elif re.match(r'(?i)^(TO_DATE|TO_TIMESTAMP)\s*\(', val):
+        val = val.replace("''", "'")
         return f"TRUNC({col}) = TRUNC({val})"
     elif val.startswith("'") and val.endswith("'"):
         return f"{col} = {val}"
