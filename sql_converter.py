@@ -976,25 +976,10 @@ def convert_sql(sql_text: str) -> dict:
             pass
 
     # ── INSERT + UPDATE çapraz referans ─────────────────────────────
-    # Aynı tablo+satırda INSERT sonrası UPDATE varsa, doğrulama SELECT'i
-    # final (UPDATE sonrası) değerlerle yeniden üretilir.
-    update_effects: dict = {}
-    for s in statement_list:
-        if s['type'] != 'UPDATE' or not s.get('has_where'):
-            continue
-        pu = parse_update(s['original'])
-        if not pu:
-            continue
-        where_pairs = _parse_col_val_pairs(pu['where_clause'] or '')
-        set_pairs   = _parse_col_val_pairs(pu['set_clause'] or '')
-        if not where_pairs or not set_pairs:
-            continue
-        tbl_up = pu['table'].upper()
-        for wk, wv in where_pairs.items():
-            key = (tbl_up, wk, wv.strip("' ").upper())
-            update_effects.setdefault(key, {}).update(set_pairs)
-
-    for s in statement_list:
+    # INSERT'ten SONRA gelen UPDATE'ler tespit edilir (DB'de olmayan
+    # bir satır UPDATE edilemez, yani UPDATE her zaman INSERT'ten sonradır).
+    # Doğrulama SELECT'i final değerlerle yeniden üretilir.
+    for idx_i, s in enumerate(statement_list):
         if s['type'] != 'INSERT' or not s.get('select'):
             continue
         pi = parse_insert(s['original'])
@@ -1002,12 +987,23 @@ def convert_sql(sql_text: str) -> dict:
             continue
         tbl_in = pi['table'].upper()
         ins_map = {c.upper(): v for c, v in zip(pi['columns'], pi['values'])}
+
         merged: dict = {}
-        for (utbl, uwk, uwv_norm), set_changes in update_effects.items():
-            if utbl != tbl_in or uwk not in ins_map:
+        for su in statement_list[idx_i + 1:]:
+            if su['type'] != 'UPDATE' or not su.get('has_where'):
                 continue
-            if ins_map[uwk].strip("' ").upper() == uwv_norm:
-                merged.update(set_changes)
+            pu = parse_update(su['original'])
+            if not pu or pu['table'].upper() != tbl_in:
+                continue
+            where_pairs = _parse_col_val_pairs(pu['where_clause'] or '')
+            set_pairs   = _parse_col_val_pairs(pu['set_clause'] or '')
+            if not where_pairs or not set_pairs:
+                continue
+            for wk, wv in where_pairs.items():
+                if wk in ins_map and ins_map[wk].strip("' ").upper() == wv.strip("' ").upper():
+                    merged.update(set_pairs)
+                    break
+
         if not merged:
             continue
         new_vals = list(pi['values'])
