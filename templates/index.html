@@ -437,10 +437,21 @@
         Script Analizi &nbsp;·&nbsp; Risk Değerlendirmesi &nbsp;·&nbsp; Doğrulama Sorguları
       </div>
     </div>
-    <button class="theme-toggle" onclick="toggleTheme()" id="themeBtn">
-      <i class="bi bi-moon-fill" id="themeIcon"></i>
-      <span id="themeTxt">Dark</span>
-    </button>
+    <div class="d-flex align-items-center gap-2">
+      {% if token_required %}
+      <div id="tokenWrap" style="display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);border-radius:20px;padding:5px 12px;">
+        <i class="bi bi-lock-fill" style="color:#a5b4fc;font-size:.8rem"></i>
+        <input id="tokenInput" type="password" placeholder="Erişim anahtarı"
+          style="background:none;border:none;outline:none;color:#e2e8f0;font-size:.78rem;width:140px;"
+          oninput="saveToken(this.value)">
+        <i class="bi bi-check-circle-fill" id="tokenOk" style="color:#4ade80;font-size:.8rem;display:none"></i>
+      </div>
+      {% endif %}
+      <button class="theme-toggle" onclick="toggleTheme()" id="themeBtn">
+        <i class="bi bi-moon-fill" id="themeIcon"></i>
+        <span id="themeTxt">Dark</span>
+      </button>
+    </div>
   </div>
 </header>
 
@@ -672,9 +683,27 @@ Delete from SCHEMA.TABLE;   -- WHERE yok → KRİTİK!"></textarea>
 <!-- Gizli download form -->
 <form id="dlForm" method="POST" action="/download" style="display:none">
   <input type="hidden" name="output" id="dlOutput">
+  <input type="hidden" name="access_token" id="dlToken">
 </form>
 
 <script>
+/* ── Token ── */
+function getToken() { return sessionStorage.getItem('accessToken') || ''; }
+function saveToken(val) {
+  sessionStorage.setItem('accessToken', val.trim());
+  const ok = document.getElementById('tokenOk');
+  if (ok) ok.style.display = val.trim() ? '' : 'none';
+}
+document.addEventListener('DOMContentLoaded', function() {
+  const inp = document.getElementById('tokenInput');
+  if (inp) {
+    const stored = getToken();
+    inp.value = stored;
+    const ok = document.getElementById('tokenOk');
+    if (ok && stored) ok.style.display = '';
+  }
+});
+
 /* ── Dark Mode ── */
 (function() {
   const saved = localStorage.getItem('theme') || 'light';
@@ -774,7 +803,11 @@ async function doConvert() {
   fd.append('sql_text', sqlText);
 
   try {
-    const res  = await fetch('/convert', { method: 'POST', body: fd });
+    const headers = {};
+    const tok = getToken();
+    if (tok) headers['X-Access-Token'] = tok;
+    const res  = await fetch('/convert', { method: 'POST', body: fd, headers });
+    if (res.status === 401) { alert('Erişim reddedildi. Lütfen erişim anahtarını kontrol edin.'); return; }
     const data = await res.json();
     if (data.error) { alert('Hata: ' + data.error); return; }
     renderResult(data);
@@ -938,6 +971,7 @@ function copyOut() {
 }
 function downloadOut() {
   document.getElementById('dlOutput').value = outputText;
+  document.getElementById('dlToken').value  = getToken();
   document.getElementById('dlForm').submit();
 }
 </script>
