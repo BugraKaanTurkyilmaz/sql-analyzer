@@ -171,6 +171,25 @@ def _unnormalize_plsql_string(val: str) -> str:
     return val
 
 
+def _parse_col_val_pairs(clause: str) -> dict:
+    """WHERE veya SET içindeki basit COL = VAL çiftlerini çıkarır."""
+    result = {}
+    if not clause:
+        return result
+    pat = re.compile(
+        r'\b([\w$#]+)\s*=\s*('
+        r"'(?:[^']|'')*'"              # string literal
+        r'|TO_DATE\s*\([^)]+\)'        # TO_DATE(...)
+        r'|TO_TIMESTAMP\s*\([^)]+\)'   # TO_TIMESTAMP(...)
+        r'|-?\d+(?:\.\d+)?'            # sayı
+        r')',
+        re.IGNORECASE
+    )
+    for m in pat.finditer(clause):
+        result[m.group(1).upper()] = m.group(2).strip()
+    return result
+
+
 def value_to_where(col: str, val: str) -> str:
     val = val.strip()
     val = _unnormalize_plsql_string(val)
@@ -955,6 +974,55 @@ def convert_sql(sql_text: str) -> dict:
         # ── Diğer (SELECT, COMMIT, ROLLBACK, vs.) — sayılmaz, atlanır ──
         else:
             pass
+
+    # ── INSERT + UPDATE çapraz referans ─────────────────────────────
+    # Aynı tablo+satırda INSERT sonrası UPDATE varsa, doğrulama SELECT'i
+    # final (UPDATE sonrası) değerlerle yeniden üretilir.
+    update_effects: dict = {}
+    for s in statement_list:
+        if s['type'] != 'UPDATE' or not s.get('has_where'):
+            continue
+        pu = parse_update(s['original'])
+        if not pu:
+            continue
+        where_pairs = _parse_col_val_pairs(pu['where_clause'] or '')
+        set_pairs   = _parse_col_val_pairs(pu['set_clause'] or '')
+        if not where_pairs or not set_pairs:
+            continue
+        tbl_up = pu['table'].upper()
+        for wk, wv in where_pairs.items():
+            key = (tbl_up, wk, wv.strip("' ").upper())
+            update_effects.setdefault(key, {}).update(set_pairs)
+
+    for s in statement_list:
+        if s['type'] != 'INSERT' or not s.get('select'):
+            continue
+        pi = parse_insert(s['original'])
+        if not pi or not pi.get('columns'):
+            continue
+        tbl_in = pi['table'].upper()
+        ins_map = {c.upper(): v for c, v in zip(pi['columns'], pi['values'])}
+        merged: dict = {}
+        for (utbl, uwk, uwv_norm), set_changes in update_effects.items():
+            if utbl != tbl_in or uwk not in ins_map:
+                continue
+            if ins_map[uwk].strip("' ").upper() == uwv_norm:
+                merged.update(set_changes)
+        if not merged:
+            continue
+        new_vals = list(pi['values'])
+        changed_labels = []
+        for i, col in enumerate(pi['columns']):
+            if col.upper() in merged:
+                new_vals[i] = merged[col.upper()]
+                changed_labels.append(f"{col}={merged[col.upper()]}")
+        merged_pi = {**pi, 'values': new_vals}
+        new_sel = generate_insert_select(merged_pi)
+        old_sel = s['select']
+        if old_sel in selects:
+            selects[selects.index(old_sel)] = new_sel
+        s['select'] = new_sel
+        s['note'] = (s.get('note') or '') + f" [UPDATE ile güncellendi: {', '.join(changed_labels)}]"
 
     # Tablo özeti — sadece DML işlemleri
     table_summary: dict = {}
