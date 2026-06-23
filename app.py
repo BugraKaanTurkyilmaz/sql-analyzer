@@ -1,6 +1,5 @@
 from flask import Flask, render_template, request, jsonify, send_file
 import os
-import re
 import tempfile
 from datetime import datetime
 from sql_converter import convert_sql, format_output
@@ -12,26 +11,14 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16 MB
 # Boş bırakılırsa koruma devre dışı (lokal geliştirme için).
 _ACCESS_TOKEN = os.environ.get('ACCESS_TOKEN', '').strip()
 
-# /test_db için izin verilen host pattern'ları (SSRF koruması).
-# Boş bırakılırsa /test_db tamamen devre dışı.
-_ALLOWED_HOST_RE = os.environ.get('ALLOWED_DB_HOSTS', '').strip()
-
 
 def _check_token():
-    """ACCESS_TOKEN tanımlıysa isteği doğrular."""
     if not _ACCESS_TOKEN:
-        return None  # koruma kapalı
+        return None
     token = request.headers.get('X-Access-Token') or request.form.get('access_token') or ''
     if token != _ACCESS_TOKEN:
         return jsonify({'error': 'Yetkisiz erişim.'}), 401
     return None
-
-
-def _host_allowed(host: str) -> bool:
-    """SSRF koruması: host izin listesiyle eşleşmeli."""
-    if not _ALLOWED_HOST_RE:
-        return False  # whitelist tanımlı değilse /test_db kapalı
-    return bool(re.fullmatch(_ALLOWED_HOST_RE, host, re.IGNORECASE))
 
 
 @app.route('/')
@@ -67,61 +54,6 @@ def convert():
         'statements': result['statements'],
         'table_summary': result['table_summary'],
     })
-
-
-@app.route('/test_db', methods=['POST'])
-def test_db():
-    denied = _check_token()
-    if denied:
-        return denied
-
-    try:
-        import oracledb
-    except ImportError:
-        return jsonify({'error': 'oracledb kütüphanesi eksik. pip install oracledb çalıştırın.'}), 500
-
-    data     = request.get_json(force=True)
-    host     = (data.get('host') or '').strip()
-    port     = int(data.get('port') or 1521)
-    service  = (data.get('service') or '').strip()
-    user     = (data.get('user') or '').strip()
-    password = (data.get('password') or '').strip()
-    stmts    = data.get('statements', [])
-
-    if not (host and service and user):
-        return jsonify({'error': 'Host, servis adı ve kullanıcı adı zorunludur.'}), 400
-
-    if not _host_allowed(host):
-        return jsonify({'error': f'"{host}" sunucusuna bağlantıya izin verilmiyor. '
-                                  'Yönetici ile iletişime geçin.'}), 403
-
-    try:
-        conn = oracledb.connect(user=user, password=password,
-                                dsn=f'{host}:{port}/{service}')
-    except Exception as e:
-        return jsonify({'error': f'Bağlantı hatası: {e}'}), 400
-
-    results = []
-    try:
-        cur = conn.cursor()
-        for stmt in stmts:
-            idx = stmt['index']
-            sql = (stmt.get('select') or '').strip()
-            if not sql:
-                results.append({'index': idx, 'status': 'SKIP', 'result': ''})
-                continue
-            try:
-                cur.execute(sql)
-                row = cur.fetchone()
-                sonuc = str(row[1]) if row and len(row) > 1 else (str(row[0]) if row else '')
-                results.append({'index': idx, 'status': 'OK', 'result': sonuc})
-            except Exception as e:
-                results.append({'index': idx, 'status': 'FAIL', 'result': str(e)})
-        cur.close()
-    finally:
-        conn.close()
-
-    return jsonify({'results': results})
 
 
 @app.route('/download', methods=['POST'])
