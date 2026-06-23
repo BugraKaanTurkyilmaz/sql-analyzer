@@ -27,7 +27,7 @@ def convert():
     else:
         return jsonify({'error': 'SQL metni veya dosya gereklidir'}), 400
 
-    result = convert_sql(sql_text)
+    result = convert_sql(sql_text) # type: ignore
     output = format_output(result)
 
     return jsonify({
