@@ -1,11 +1,37 @@
 from flask import Flask, render_template, request, jsonify, send_file
 import os
+import re
 import tempfile
 from datetime import datetime
 from sql_converter import convert_sql, format_output
 
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16 MB
+
+# Railway/prod ortamında ACCESS_TOKEN env variable ile basit koruma.
+# Boş bırakılırsa koruma devre dışı (lokal geliştirme için).
+_ACCESS_TOKEN = os.environ.get('ACCESS_TOKEN', '').strip()
+
+# /test_db için izin verilen host pattern'ları (SSRF koruması).
+# Boş bırakılırsa /test_db tamamen devre dışı.
+_ALLOWED_HOST_RE = os.environ.get('ALLOWED_DB_HOSTS', '').strip()
+
+
+def _check_token():
+    """ACCESS_TOKEN tanımlıysa isteği doğrular."""
+    if not _ACCESS_TOKEN:
+        return None  # koruma kapalı
+    token = request.headers.get('X-Access-Token') or request.form.get('access_token') or ''
+    if token != _ACCESS_TOKEN:
+        return jsonify({'error': 'Yetkisiz erişim.'}), 401
+    return None
+
+
+def _host_allowed(host: str) -> bool:
+    """SSRF koruması: host izin listesiyle eşleşmeli."""
+    if not _ALLOWED_HOST_RE:
+        return False  # whitelist tanımlı değilse /test_db kapalı
+    return bool(re.fullmatch(_ALLOWED_HOST_RE, host, re.IGNORECASE))
 
 
 @app.route('/')
@@ -15,8 +41,11 @@ def index():
 
 @app.route('/convert', methods=['POST'])
 def convert():
-    sql_text = ''
+    denied = _check_token()
+    if denied:
+        return denied
 
+    sql_text = ''
     if 'file' in request.files and request.files['file'].filename:
         raw = request.files['file'].read()
         try:
@@ -42,6 +71,10 @@ def convert():
 
 @app.route('/test_db', methods=['POST'])
 def test_db():
+    denied = _check_token()
+    if denied:
+        return denied
+
     try:
         import oracledb
     except ImportError:
@@ -57,6 +90,10 @@ def test_db():
 
     if not (host and service and user):
         return jsonify({'error': 'Host, servis adı ve kullanıcı adı zorunludur.'}), 400
+
+    if not _host_allowed(host):
+        return jsonify({'error': f'"{host}" sunucusuna bağlantıya izin verilmiyor. '
+                                  'Yönetici ile iletişime geçin.'}), 403
 
     try:
         conn = oracledb.connect(user=user, password=password,
@@ -89,6 +126,10 @@ def test_db():
 
 @app.route('/download', methods=['POST'])
 def download():
+    denied = _check_token()
+    if denied:
+        return denied
+
     output = request.form.get('output', '')
     ts = datetime.now().strftime('%Y%m%d_%H%M%S')
 
@@ -114,6 +155,4 @@ def download():
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5001))
-    debug = os.environ.get('FLASK_ENV') != 'production'
-    print(f"SQL Doğrulama & Risk Analizi uygulaması başlatılıyor → port {port}")
-    app.run(debug=debug, host='0.0.0.0', port=port)
+    app.run(debug=False, host='0.0.0.0', port=port)
