@@ -2,7 +2,7 @@
 
 ## Proje Özeti
 
-Bu araç, Oracle SQL betiklerini (INSERT / UPDATE / DELETE / DDL / EXEC) analiz eden, risk skoru üreten ve doğrulama SELECT'leri oluşturan bir Flask web uygulamasıdır. Opsiyonel olarak canlı bir Oracle veritabanına bağlanıp sorguları gerçek zamanlı çalıştırabilir.
+Bu araç, Oracle SQL betiklerini (INSERT / UPDATE / DELETE / DDL / EXEC) analiz eden, risk skoru üreten ve doğrulama SELECT'leri oluşturan bir Flask web uygulamasıdır. Üretilen doğrulama script'i hedef veritabanında elle çalıştırılır; araç kendisi bir Oracle bağlantısı açmaz.
 
 ---
 
@@ -58,7 +58,7 @@ pip install -r requirements.txt
 `requirements.txt` içeriği:
 ```
 flask>=2.3.0
-oracledb>=2.0.0
+gunicorn>=21.0.0
 ```
 
 ---
@@ -97,15 +97,16 @@ python3 run.py input.sql output.sql   # dosyaya kaydeder
 
 ---
 
-## 5. Oracle DB Bağlantısı (Opsiyonel)
+## 5. Erişim Anahtarı (Opsiyonel)
 
-Uygulama, üretilen doğrulama SELECT'lerini canlı Oracle'a gönderip sonuç alabilir. Bunun için ek bir sistem kütüphanesi gerekmez — `oracledb` paketi Python-native (thin) modda çalışır, Oracle Client kurulumu gerektirmez.
+Uygulama açık internete çıkacaksa `ACCESS_TOKEN` ortam değişkeni ile basit bir erişim koruması eklenebilir:
 
-Arayüzde **"Veritabanında Test Et"** butonuna tıklayarak bağlantı bilgilerini gir:
-- **Host**: Oracle sunucusu IP/hostname
-- **Port**: varsayılan 1521
-- **Service Name**: Oracle servis adı
-- **Kullanıcı / Şifre**
+```bash
+export ACCESS_TOKEN="gizli-bir-anahtar"
+python3 app.py
+```
+
+Boş bırakılırsa (varsayılan) koruma devre dışıdır — yerel geliştirme için uygundur.
 
 ---
 
