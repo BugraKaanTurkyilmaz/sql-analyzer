@@ -89,6 +89,26 @@
       letter-spacing: .01em;
     }
 
+    /* ───── Alt Bilgi (Footer) ───── */
+    .site-footer {
+      border-top: 1px solid var(--border);
+      padding: 18px 0 26px;
+      margin-top: 12px;
+      text-align: center;
+      color: var(--muted);
+      font-size: .78rem;
+      transition: border-color .25s, color .25s;
+    }
+    .site-footer .credit {
+      font-weight: 600;
+      color: var(--text);
+      letter-spacing: .01em;
+    }
+    .site-footer .dot {
+      margin: 0 8px;
+      opacity: .5;
+    }
+
     /* ───── Kart / Panel ───── */
     .panel {
       background: var(--surface);
@@ -679,6 +699,13 @@ Delete from SCHEMA.TABLE;   -- WHERE yok → KRİTİK!"></textarea>
 
   </div><!-- /row -->
 </main>
+
+<!-- ═══════════ FOOTER ═══════════ -->
+<footer class="site-footer">
+  <span class="credit">Buğra Kaan Türkyılmaz</span>
+  <span class="dot">&middot;</span>
+  <span>SQL Analyzer</span>
+</footer>
 
 <!-- Gizli download form -->
 <form id="dlForm" method="POST" action="/download" style="display:none">
